@@ -92,7 +92,7 @@ def get_user_by_email(email: str, db: Session = Depends(get_db)):
 
 @app.post("/user", status_code=201)
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
-    new_user = User(**user_data.dict())
+    new_user = User(**user_data.model_dump())
     
     db.add(new_user)
     db.commit()
@@ -102,7 +102,7 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/playlist", status_code=201)
 def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db)):
-    new_playlist = Playlist(**playlist_data.dict())
+    new_playlist = Playlist(**playlist_data.model_dump())
     
     db.add(new_playlist)
     db.commit()
@@ -112,7 +112,7 @@ def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db)
 
 @app.post("/listeningHistory", status_code=201)
 def create_listening_history(listening_history_data: ListeningHistoryCreate, db: Session = Depends(get_db)):
-    new_listening_history = ListeningHistory(**listening_history_data.dict())
+    new_listening_history = ListeningHistory(**listening_history_data.model_dump())
     
     db.add(new_listening_history)
     db.commit()
@@ -122,7 +122,7 @@ def create_listening_history(listening_history_data: ListeningHistoryCreate, db:
 
 @app.post("/UserAlbumListening", status_code=201)
 def create_user_album_listening(user_album_listening_data: UserAlbumListeningCreate, db: Session = Depends(get_db)):
-    new_user_album_listening = UserAlbumListening(**user_album_listening_data.dict())
+    new_user_album_listening = UserAlbumListening(**user_album_listening_data.model_dump())
     
     db.add(new_user_album_listening)
     db.commit()
@@ -132,7 +132,7 @@ def create_user_album_listening(user_album_listening_data: UserAlbumListeningCre
 
 @app.post("/UserPlaylistListening", status_code=201)
 def create_user_playlist_listening(user_album_listening_data: UserPlaylistListeningCreate, db: Session = Depends(get_db)):
-    new_user_playlist_listening = UserPlaylistListening(**user_album_listening_data.dict())
+    new_user_playlist_listening = UserPlaylistListening(**user_album_listening_data.model_dump())
     
     db.add(new_user_playlist_listening)
     db.commit()
@@ -142,7 +142,7 @@ def create_user_playlist_listening(user_album_listening_data: UserPlaylistListen
 
 @app.post("/PlaylistUserFavorite", status_code=201)
 def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavoriteCreate, db: Session = Depends(get_db)):
-    new_playlist_user_favorite = PlaylistUserFavorite(**playlist_user_favorite_data.dict())
+    new_playlist_user_favorite = PlaylistUserFavorite(**playlist_user_favorite_data.model_dump())
     
     db.add(new_playlist_user_favorite)
     db.commit()
@@ -152,7 +152,7 @@ def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavor
 
 @app.post("/TrackUserFavorite", status_code=201)
 def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db)):
-    new_track_user_favorite = TrackUserFavorite(**track_user_favorite_data.dict())
+    new_track_user_favorite = TrackUserFavorite(**track_user_favorite_data.model_dump())
     
     db.add(new_track_user_favorite)
     db.commit()
@@ -162,7 +162,7 @@ def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate
 
 @app.post("/UserArtistFavorite", status_code=201)
 def create_user_artist_favorite(user_artist_favorite_data: UserArtistFavoriteCreate, db: Session = Depends(get_db)):
-    new_user_artist_favorite = UserArtistFavorite(**user_artist_favorite_data.dict())
+    new_user_artist_favorite = UserArtistFavorite(**user_artist_favorite_data.model_dump())
     
     db.add(new_user_artist_favorite)
     db.commit()
@@ -172,7 +172,7 @@ def create_user_artist_favorite(user_artist_favorite_data: UserArtistFavoriteCre
 
 @app.post("/UserAlbumFavorite", status_code=201)
 def create_user_album_favorite(user_album_favorite_data: UserAlbumFavoriteCreate, db: Session = Depends(get_db)):
-    new_user_album_favorite = UserAlbumFavorite(**user_album_favorite_data.dict())
+    new_user_album_favorite = UserAlbumFavorite(**user_album_favorite_data.model_dump())
     
     db.add(new_user_album_favorite)
     db.commit()
@@ -182,7 +182,7 @@ def create_user_album_favorite(user_album_favorite_data: UserAlbumFavoriteCreate
 
 @app.post("/PlaylistUser", status_code=201)
 def create_playlist_user(playlist_user_data: PlaylistUserCreate, db: Session = Depends(get_db)):
-    new_playlist_user = PlaylistUser(**playlist_user_data.dict())
+    new_playlist_user = PlaylistUser(**playlist_user_data.model_dump())
     
     db.add(new_playlist_user)
     db.commit()
@@ -192,7 +192,7 @@ def create_playlist_user(playlist_user_data: PlaylistUserCreate, db: Session = D
 
 @app.post("/PlaylistTrack", status_code=201)
 def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session = Depends(get_db)):
-    new_playlist_track = PlaylistTrack(**playlist_track_data.dict())
+    new_playlist_track = PlaylistTrack(**playlist_track_data.model_dump())
     
     db.add(new_playlist_track)
     db.commit()

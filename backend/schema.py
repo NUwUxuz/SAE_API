@@ -116,10 +116,10 @@ class Playlist(PlaylistBase):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    login: str
-    password: str
+    user_login: str
+    user_mdp: str
     pseudo: Optional[str] = None
-    gender: Optional[str] = None
+    user_gender: Optional[str] = None
     birth_year: Optional[date] = None
     situation_name: Optional[str] = None
     frequency_interval: Optional[str] = None

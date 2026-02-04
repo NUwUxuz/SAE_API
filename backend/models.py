@@ -144,9 +144,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     image: Mapped[Optional[str]] = mapped_column(String(255))
     pseudo: Mapped[Optional[str]] = mapped_column(String(50))
-    login: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    mdp: Mapped[str] = mapped_column(String(64), nullable=False)
-    gender: Mapped[Optional[str]] = mapped_column(String(1)) # char
+    user_login: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    user_mdp: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_gender: Mapped[Optional[str]] = mapped_column(String(1)) # char
     birth_year: Mapped[Optional[Date]] = mapped_column(Date)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
     situation_name: Mapped[Optional[str]] = mapped_column(String(50))
@@ -309,13 +309,13 @@ class UserAlbumListening(Base):
     __tablename__ = 'user_album_listening'
     user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
     album_id: Mapped[int] = mapped_column(ForeignKey('sae.album.album_id', ondelete="CASCADE"), primary_key=True)
-    nb_listening: Mapped[Optional[int]] = mapped_column(Integer)
+    nb_listening: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 class UserPlaylistListening(Base):
     __tablename__ = 'user_playlist_listening'
     user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
     playlist_id: Mapped[int] = mapped_column(ForeignKey('sae.playlist.playlist_id', ondelete="CASCADE"), primary_key=True)
-    nb_listening: Mapped[Optional[int]] = mapped_column(Integer)
+    nb_listening: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 # =================================================================================
 # |-                                    Vues
