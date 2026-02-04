@@ -2,11 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
-from models import (
+
+from models import ( 
     Album, User, Playlist, Track, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack,
-    
+    PlaylistTrack
+)
+
+from schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
     PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
     PlaylistTrackCreate
