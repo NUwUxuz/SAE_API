@@ -8,7 +8,7 @@
   color-scheme: light dark;
   color: #111;
   background-color: #ffffff;
-
+  text-align: left;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -27,7 +27,7 @@ a:hover {
 body {
   margin: 0;
   
-  place-items: center;
+  /* place-items: center; */
   min-width: 320px;
   min-height: 100vh;
 }
@@ -36,6 +36,8 @@ h1 {
   font-size: 3.2em;
   line-height: 1.1;
 }
+
+
 
 button {
   border-radius: 8px;
@@ -78,7 +80,6 @@ button:focus-visible {
   padding: 20px;
   background-color: #111;
   color: white;
-  width: 100%;
 }
 
 .logo {

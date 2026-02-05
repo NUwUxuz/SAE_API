@@ -86,10 +86,6 @@ class Artist(Base):
     artist_url: Mapped[Optional[str]] = mapped_column(String(255))
     artist_image_file: Mapped[Optional[str]] = mapped_column(String(255))
 
-    # Relations
-    tracks = relationship("Track", secondary="sae.artist_album_track", back_populates="artists", overlaps="albums,artists,tracks")
-    albums = relationship("Album", secondary="sae.artist_album_track", back_populates="artists", overlaps="albums,artists,tracks")
-
 class Album(Base):
     __tablename__ = 'album'
     album_id: Mapped[int] = mapped_column(primary_key=True)
@@ -107,10 +103,6 @@ class Album(Base):
     album_url: Mapped[Optional[str]] = mapped_column(String(255))
     type_id: Mapped[Optional[int]] = mapped_column(ForeignKey('sae.album_type.type_id', ondelete="SET NULL"))
 
-    # Relations
-    tracks = relationship("Track", secondary="sae.artist_album_track", back_populates="albums", overlaps="artists,albums,tracks")
-    artists = relationship("Artist", secondary="sae.artist_album_track", back_populates="albums", overlaps="artists,albums,tracks")
-
 class Track(Base):
     __tablename__ = 'track'
     track_id: Mapped[int] = mapped_column(primary_key=True)
@@ -126,11 +118,6 @@ class Track(Base):
     track_lyricist: Mapped[Optional[str]] = mapped_column(String(100))
     track_publisher: Mapped[Optional[str]] = mapped_column(String(100))
     license_id: Mapped[Optional[int]] = mapped_column(ForeignKey('sae.license.license_id', ondelete="SET NULL"))
-
-    # Relations
-    artists = relationship("Artist", secondary="sae.artist_album_track", back_populates="tracks", overlaps="artists,albums,tracks")
-    albums = relationship("Album", secondary="sae.artist_album_track", back_populates="tracks", overlaps="artists,albums,tracks")
-    playlists = relationship("Playlist", secondary="sae.playlist_track", back_populates="tracks")
 
 class StatsEchonest(Base):
     __tablename__ = 'stats_echonest'
@@ -157,17 +144,14 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     image: Mapped[Optional[str]] = mapped_column(String(255))
     pseudo: Mapped[Optional[str]] = mapped_column(String(50))
-    login: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    mdp: Mapped[str] = mapped_column(String(64), nullable=False)
-    gender: Mapped[Optional[str]] = mapped_column(String(1)) # char
+    user_login: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    user_mdp: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_gender: Mapped[Optional[str]] = mapped_column(String(1)) # char
     birth_year: Mapped[Optional[Date]] = mapped_column(Date)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
     situation_name: Mapped[Optional[str]] = mapped_column(String(50))
     frequency_interval: Mapped[Optional[str]] = mapped_column(String(50))
     last_calculated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
-
-    # Relations
-    playlists = relationship("Playlist", back_populates="owner")
 
 class SearchHistory(Base):
     __tablename__ = 'search_history'
@@ -196,10 +180,6 @@ class Playlist(Base):
     playlist_name: Mapped[Optional[str]] = mapped_column(String(100))
     playlist_listens: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"))
-
-    # Relations
-    owner = relationship("User", back_populates="playlists")
-    tracks = relationship("Track", secondary="sae.playlist_track", back_populates="playlists")
 
 class ListeningHistory(Base):
     __tablename__ = 'listening_history'
@@ -332,13 +312,13 @@ class UserAlbumListening(Base):
     __tablename__ = 'user_album_listening'
     user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
     album_id: Mapped[int] = mapped_column(ForeignKey('sae.album.album_id', ondelete="CASCADE"), primary_key=True)
-    nb_listening: Mapped[Optional[int]] = mapped_column(Integer)
+    nb_listening: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 class UserPlaylistListening(Base):
     __tablename__ = 'user_playlist_listening'
     user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
     playlist_id: Mapped[int] = mapped_column(ForeignKey('sae.playlist.playlist_id', ondelete="CASCADE"), primary_key=True)
-    nb_listening: Mapped[Optional[int]] = mapped_column(Integer)
+    nb_listening: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 # =================================================================================
 # |-                                    Vues
@@ -403,3 +383,4 @@ class ViewFavoriteListens(Base):
     album_favorites: Mapped[Optional[int]] = mapped_column(Integer)
     playlist_listens: Mapped[Optional[int]] = mapped_column(Integer)
     playlist_favorites: Mapped[Optional[int]] = mapped_column(Integer)
+
