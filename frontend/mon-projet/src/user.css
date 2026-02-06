@@ -31,6 +31,12 @@
     cursor: default;
 }
 
+.input-text:focus {
+    outline: none;
+    border: none;
+}
+
+
 #email {
     font-weight: bold;
     font-size: 28px;
@@ -134,4 +140,41 @@ button {
     display: flex;
     justify-content: center;
     margin: 20px;
+}
+
+
+
+
+
+.stat1 {
+    display: flex;
+    justify-content: center;
+    gap: 200px;
+}
+
+.stat-simple {
+    display: block;
+    text-align: center;
+}
+
+.chiffre-image {
+    display: inline-flex;
+}
+
+.souligner {
+    text-decoration: underline;
+}
+
+.chiffre-stat {
+    font-size: 32px;
+}
+
+#image-favoris {
+    width: 30px;
+    height: 30px;
+}
+
+#image-playlist {
+    width: 30px;
+    height: 30px;
 }
