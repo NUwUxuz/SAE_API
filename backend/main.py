@@ -89,6 +89,215 @@ def get_user_by_email(email: str, db: Session = Depends(get_db)):
     
     return user
 
+@app.get("/playlists/user/{user_id}", response_model=List[schema.Playlist], include_in_schema=False)
+def get_user_playlists(user_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère les playlists d'un utilisateur spécifique.
+    Caché de la doc (usage interne).
+    """
+    playlists = db.query(models.Playlist).filter(models.Playlist.user_id == user_id).options(joinedload(models.Playlist.tracks)).all()
+    return playlists
+
+# --- Routes Publiques (Données de référence) ---
+
+@app.get("/genres", response_model=List[schema.Genre])
+def get_all_genres(db: Session = Depends(get_db)):
+    """Récupère tous les genres musicaux (pour filtres/navigation)."""
+    return db.query(models.Genre).all()
+
+@app.get("/tags", response_model=List[schema.Tag])
+def get_all_tags(db: Session = Depends(get_db)):
+    """Récupère tous les tags (pour recherche avancée)."""
+    return db.query(models.Tag).all()
+
+# --- Routes Utilisateur Privées (Cachées) ---
+
+@app.get("/users/{user_id}/favorites/tracks", response_model=List[schema.Track], include_in_schema=False)
+def get_user_favorite_tracks(user_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère les pistes favorites d'un utilisateur.
+    Caché de la doc (usage interne).
+    """
+    # Jointure via la table TrackUserFavorite
+    favorites = db.query(models.Track).join(
+        models.TrackUserFavorite, 
+        models.Track.track_id == models.TrackUserFavorite.track_id
+    ).filter(
+        models.TrackUserFavorite.user_id == user_id
+    ).options(joinedload(models.Track.artists)).all()
+    return favorites
+
+@app.get("/users/{user_id}/favorites/artists", response_model=List[schema.Artist], include_in_schema=False)
+def get_user_favorite_artists(user_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère les artistes favoris d'un utilisateur.
+    Caché de la doc (usage interne).
+    """
+    favorites = db.query(models.Artist).join(
+        models.UserArtistFavorite,
+        models.Artist.artist_id == models.UserArtistFavorite.artist_id
+    ).filter(
+        models.UserArtistFavorite.user_id == user_id
+    ).options(joinedload(models.Artist.albums)).all()
+    return favorites
+
+@app.get("/users/{user_id}/favorites/albums", response_model=List[schema.Album], include_in_schema=False)
+def get_user_favorite_albums(user_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère les albums favoris d'un utilisateur.
+    Caché de la doc (usage interne).
+    """
+    favorites = db.query(models.Album).join(
+        models.UserAlbumFavorite,
+        models.Album.album_id == models.UserAlbumFavorite.album_id
+    ).filter(
+        models.UserAlbumFavorite.user_id == user_id
+    ).options(joinedload(models.Album.tracks)).all()
+    return favorites
+
+@app.get("/users/{user_id}/listening-history", response_model=List[schema.ListeningHistory], include_in_schema=False)
+def get_user_listening_history(user_id: int, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Récupère l'historique d'écoute d'un utilisateur (playlists écoutées).
+    Caché de la doc (usage interne).
+    """
+    history = db.query(models.ListeningHistory).filter(
+        models.ListeningHistory.user_id == user_id
+    ).options(joinedload(models.ListeningHistory.playlist)).order_by(
+        models.ListeningHistory.listened_at.desc()
+    ).offset(skip).limit(limit).all()
+    return history
+
+@app.get("/users/{user_id}/top-tracks", response_model=List[schema.TrackWithListenings], include_in_schema=False)
+def get_user_top_tracks(user_id: int, limit: int = 10, db: Session = Depends(get_db)):
+    """
+    Récupère les pistes les plus écoutées par l'utilisateur.
+    Caché de la doc (usage interne).
+    """
+    top_tracks = db.query(
+        models.Track,
+        models.UserTrackListening.nb_listening
+    ).join(
+        models.UserTrackListening,
+        models.Track.track_id == models.UserTrackListening.track_id
+    ).filter(
+        models.UserTrackListening.user_id == user_id
+    ).options(joinedload(models.Track.artists)).order_by(
+        models.UserTrackListening.nb_listening.desc()
+    ).limit(limit).all()
+    
+    result = []
+    for track, nb_listening in top_tracks:
+        track_dict = {
+            "track_id": track.track_id,
+            "track_title": track.track_title,
+            "track_duration": track.track_duration,
+            "track_listens": track.track_listens,
+            "track_favorites": track.track_favorites,
+            "track_interest": track.track_interest,
+            "track_date_created": track.track_date_created,
+            "track_date_recorded": track.track_date_recorded,
+            "track_composer": track.track_composer,
+            "nb_listening": nb_listening,
+            "artists": track.artists
+        }
+        result.append(track_dict)
+    return result
+
+@app.get("/users/{user_id}/top-albums", response_model=List[schema.AlbumWithListenings], include_in_schema=False)
+def get_user_top_albums(user_id: int, limit: int = 10, db: Session = Depends(get_db)):
+    """
+    Récupère les albums les plus écoutés par l'utilisateur.
+    Caché de la doc (usage interne).
+    """
+    top_albums = db.query(
+        models.Album,
+        models.UserAlbumListening.nb_listening
+    ).join(
+        models.UserAlbumListening,
+        models.Album.album_id == models.UserAlbumListening.album_id
+    ).filter(
+        models.UserAlbumListening.user_id == user_id
+    ).options(joinedload(models.Album.tracks)).order_by(
+        models.UserAlbumListening.nb_listening.desc()
+    ).limit(limit).all()
+    
+    result = []
+    for album, nb_listening in top_albums:
+        album_dict = {
+            "album_id": album.album_id,
+            "album_title": album.album_title,
+            "album_handle": album.album_handle,
+            "album_information": album.album_information,
+            "album_date_released": album.album_date_released,
+            "album_listens": album.album_listens,
+            "album_favorites": album.album_favorites,
+            "album_producer": album.album_producer,
+            "album_image_file": album.album_image_file,
+            "nb_listening": nb_listening,
+            "tracks": album.tracks
+        }
+        result.append(album_dict)
+    return result
+
+@app.get("/users/{user_id}/listening-stats", response_model=schema.UserListeningStats, include_in_schema=False)
+def get_user_listening_stats(user_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère les statistiques globales d'écoute de l'utilisateur.
+    Caché de la doc (pour page statistiques).
+    """
+    from sqlalchemy import func
+    
+    # Total écoutes pistes
+    total_tracks = db.query(func.sum(models.UserTrackListening.nb_listening)).filter(
+        models.UserTrackListening.user_id == user_id
+    ).scalar() or 0
+    
+    # Total écoutes albums
+    total_albums = db.query(func.sum(models.UserAlbumListening.nb_listening)).filter(
+        models.UserAlbumListening.user_id == user_id
+    ).scalar() or 0
+    
+    # Total écoutes playlists
+    total_playlists = db.query(func.sum(models.UserPlaylistListening.nb_listening)).filter(
+        models.UserPlaylistListening.user_id == user_id
+    ).scalar() or 0
+    
+    # Nombre de pistes uniques écoutées
+    unique_tracks = db.query(func.count(models.UserTrackListening.track_id)).filter(
+        models.UserTrackListening.user_id == user_id
+    ).scalar() or 0
+    
+    # Nombre d'albums uniques écoutés
+    unique_albums = db.query(func.count(models.UserAlbumListening.album_id)).filter(
+        models.UserAlbumListening.user_id == user_id
+    ).scalar() or 0
+    
+    # Nombre de playlists uniques écoutées
+    unique_playlists = db.query(func.count(models.UserPlaylistListening.playlist_id)).filter(
+        models.UserPlaylistListening.user_id == user_id
+    ).scalar() or 0
+    
+    return {
+        "total_track_listenings": total_tracks,
+        "total_album_listenings": total_albums,
+        "total_playlist_listenings": total_playlists,
+        "total_unique_tracks": unique_tracks,
+        "total_unique_albums": unique_albums,
+        "total_unique_playlists": unique_playlists
+    }
+
+@app.get("/users/{user_id}/stats", response_model=schema.StatsUser, include_in_schema=False)
+def get_user_stats(user_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère les affinités musicales calculées de l'utilisateur.
+    Caché de la doc (pour graphique profil musical).
+    """
+    stats = db.query(models.StatsUser).filter(models.StatsUser.user_id == user_id).first()
+    if not stats:
+        raise HTTPException(status_code=404, detail="Stats utilisateur non trouvées")
+    return stats
+
 
 ###########################################
 ##              POST                     ##
@@ -204,100 +413,6 @@ def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session 
     
     return new_playlist_track
 
-###########################################
-##              GET                      ##
-###########################################
-
-
-@app.get("/playlists/user/{user_id}", response_model=List[schema.Playlist], include_in_schema=False)
-def get_user_playlists(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les playlists d'un utilisateur spécifique.
-    Caché de la doc (usage interne).
-    """
-    playlists = db.query(models.Playlist).filter(models.Playlist.user_id == user_id).options(joinedload(models.Playlist.tracks)).all()
-    return playlists
-
-# --- Routes Publiques (Données de référence) ---
-
-@app.get("/genres", response_model=List[schema.Genre])
-def get_all_genres(db: Session = Depends(get_db)):
-    """Récupère tous les genres musicaux (pour filtres/navigation)."""
-    return db.query(models.Genre).all()
-
-@app.get("/tags", response_model=List[schema.Tag])
-def get_all_tags(db: Session = Depends(get_db)):
-    """Récupère tous les tags (pour recherche avancée)."""
-    return db.query(models.Tag).all()
-
-# --- Routes Utilisateur Privées (Cachées) ---
-
-@app.get("/users/{user_id}/favorites/tracks", response_model=List[schema.Track], include_in_schema=False)
-def get_user_favorite_tracks(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les pistes favorites d'un utilisateur.
-    Caché de la doc (usage interne).
-    """
-    # Jointure via la table TrackUserFavorite
-    favorites = db.query(models.Track).join(
-        models.TrackUserFavorite, 
-        models.Track.track_id == models.TrackUserFavorite.track_id
-    ).filter(
-        models.TrackUserFavorite.user_id == user_id
-    ).options(joinedload(models.Track.artists)).all()
-    return favorites
-
-@app.get("/users/{user_id}/favorites/artists", response_model=List[schema.Artist], include_in_schema=False)
-def get_user_favorite_artists(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les artistes favoris d'un utilisateur.
-    Caché de la doc (usage interne).
-    """
-    favorites = db.query(models.Artist).join(
-        models.UserArtistFavorite,
-        models.Artist.artist_id == models.UserArtistFavorite.artist_id
-    ).filter(
-        models.UserArtistFavorite.user_id == user_id
-    ).options(joinedload(models.Artist.albums)).all()
-    return favorites
-
-@app.get("/users/{user_id}/favorites/albums", response_model=List[schema.Album], include_in_schema=False)
-def get_user_favorite_albums(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les albums favoris d'un utilisateur.
-    Caché de la doc (usage interne).
-    """
-    favorites = db.query(models.Album).join(
-        models.UserAlbumFavorite,
-        models.Album.album_id == models.UserAlbumFavorite.album_id
-    ).filter(
-        models.UserAlbumFavorite.user_id == user_id
-    ).options(joinedload(models.Album.tracks)).all()
-    return favorites
-
-@app.get("/users/{user_id}/listening-history", response_model=List[schema.ListeningHistory], include_in_schema=False)
-def get_user_listening_history(user_id: int, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    """
-    Récupère l'historique d'écoute d'un utilisateur (playlists écoutées).
-    Caché de la doc (usage interne).
-    """
-    history = db.query(models.ListeningHistory).filter(
-        models.ListeningHistory.user_id == user_id
-    ).options(joinedload(models.ListeningHistory.playlist)).order_by(
-        models.ListeningHistory.listened_at.desc()
-    ).offset(skip).limit(limit).all()
-    return history
-
-@app.get("/users/{user_id}/stats", response_model=schema.StatsUser, include_in_schema=False)
-def get_user_stats(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les affinités musicales calculées de l'utilisateur.
-    Caché de la doc (pour graphique profil musical).
-    """
-    stats = db.query(models.StatsUser).filter(models.StatsUser.user_id == user_id).first()
-    if not stats:
-        raise HTTPException(status_code=404, detail="Stats utilisateur non trouvées")
-    return stats
 
 ###########################################
 ##      AUTORISATIONS & LANCEMENT        ##

@@ -165,6 +165,35 @@ class ListeningHistory(ListeningHistoryBase):
 
     class Config:
         from_attributes = True
+
+# ==================== Listening Stats Schemas ====================
+
+class TrackWithListenings(TrackBase):
+    """Piste avec nombre d'écoutes de l'utilisateur."""
+    track_id: int
+    nb_listening: int
+    artists: List[ArtistBase] = []
+
+    class Config:
+        from_attributes = True
+
+class AlbumWithListenings(AlbumBase):
+    """Album avec nombre d'écoutes de l'utilisateur."""
+    album_id: int
+    nb_listening: int
+    tracks: List[TrackBase] = []
+
+    class Config:
+        from_attributes = True
+
+class UserListeningStats(BaseModel):
+    """Statistiques globales d'écoute d'un utilisateur."""
+    total_track_listenings: int
+    total_album_listenings: int
+    total_playlist_listenings: int
+    total_unique_tracks: int
+    total_unique_albums: int
+    total_unique_playlists: int
     
 
 ##########################################
