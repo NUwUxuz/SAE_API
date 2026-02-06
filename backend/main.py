@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session, sessionmaker, joinedload
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
-from typing import List
-import models, schema
+
+import bcrypt
 
 from models import ( 
     Album, User, Playlist, Track, ListeningHistory, UserAlbumListening, UserPlaylistListening,
@@ -14,11 +14,29 @@ from models import (
 from schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
     PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
-    PlaylistTrackCreate
+    PlaylistTrackCreate,
+
+    UserUpdate, PlaylistUpdate
 )
 
 import uvicorn
 import os
+from datetime import date, datetime, timedelta
+from dotenv import load_dotenv
+
+from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+load_dotenv()
+
+# Configuration JWT
+SECRET_KEY = os.getenv("SECRET_KEY")
+if SECRET_KEY is None:
+    raise ValueError("La SECRET_KEY n'a pas été trouvée. Vérifiez votre fichier .env")
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 ###########################################
@@ -49,11 +67,62 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def hash_password(password: str):
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str):
+    password_byte = plain_password.encode('utf-8')
+    hashed_byte = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_byte, hashed_byte)
+
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_login: str = payload.get("sub")
+        if user_login is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
         
+    user = db.query(User).filter(User.user_login == user_login).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
 
 ###########################################
 ##               ROUTES                  ##
 ###########################################
+
+######## RECEVOIR LE TOKEN ##
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.user_login == form_data.username).first()
+    
+    if not user or not verify_password(form_data.password, user.user_mdp):
+        raise HTTPException(status_code=401, detail="Login ou mot de passe incorrect")
+
+    # Générer le token
+    access_token = create_access_token(data={"sub": user.user_login})
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 ######## GET ##
@@ -89,223 +158,17 @@ def get_user_by_email(email: str, db: Session = Depends(get_db)):
     
     return user
 
-@app.get("/playlists/user/{user_id}", response_model=List[schema.Playlist], include_in_schema=False)
-def get_user_playlists(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les playlists d'un utilisateur spécifique.
-    Caché de la doc (usage interne).
-    """
-    playlists = db.query(models.Playlist).filter(models.Playlist.user_id == user_id).options(joinedload(models.Playlist.tracks)).all()
-    return playlists
 
-# --- Routes Publiques (Données de référence) ---
-
-@app.get("/genres", response_model=List[schema.Genre])
-def get_all_genres(db: Session = Depends(get_db)):
-    """Récupère tous les genres musicaux (pour filtres/navigation)."""
-    return db.query(models.Genre).all()
-
-@app.get("/tags", response_model=List[schema.Tag])
-def get_all_tags(db: Session = Depends(get_db)):
-    """Récupère tous les tags (pour recherche avancée)."""
-    return db.query(models.Tag).all()
-
-# --- Routes Utilisateur Privées (Cachées) ---
-
-@app.get("/users/{user_id}/favorites/tracks", response_model=List[schema.Track], include_in_schema=False)
-def get_user_favorite_tracks(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les pistes favorites d'un utilisateur.
-    Caché de la doc (usage interne).
-    """
-    # Jointure via la table TrackUserFavorite
-    favorites = db.query(models.Track).join(
-        models.TrackUserFavorite, 
-        models.Track.track_id == models.TrackUserFavorite.track_id
-    ).filter(
-        models.TrackUserFavorite.user_id == user_id
-    ).options(joinedload(models.Track.artists)).all()
-    return favorites
-
-@app.get("/users/{user_id}/favorites/artists", response_model=List[schema.Artist], include_in_schema=False)
-def get_user_favorite_artists(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les artistes favoris d'un utilisateur.
-    Caché de la doc (usage interne).
-    """
-    favorites = db.query(models.Artist).join(
-        models.UserArtistFavorite,
-        models.Artist.artist_id == models.UserArtistFavorite.artist_id
-    ).filter(
-        models.UserArtistFavorite.user_id == user_id
-    ).options(joinedload(models.Artist.albums)).all()
-    return favorites
-
-@app.get("/users/{user_id}/favorites/albums", response_model=List[schema.Album], include_in_schema=False)
-def get_user_favorite_albums(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les albums favoris d'un utilisateur.
-    Caché de la doc (usage interne).
-    """
-    favorites = db.query(models.Album).join(
-        models.UserAlbumFavorite,
-        models.Album.album_id == models.UserAlbumFavorite.album_id
-    ).filter(
-        models.UserAlbumFavorite.user_id == user_id
-    ).options(joinedload(models.Album.tracks)).all()
-    return favorites
-
-@app.get("/users/{user_id}/listening-history", response_model=List[schema.ListeningHistory], include_in_schema=False)
-def get_user_listening_history(user_id: int, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    """
-    Récupère l'historique d'écoute d'un utilisateur (playlists écoutées).
-    Caché de la doc (usage interne).
-    """
-    history = db.query(models.ListeningHistory).filter(
-        models.ListeningHistory.user_id == user_id
-    ).options(joinedload(models.ListeningHistory.playlist)).order_by(
-        models.ListeningHistory.listened_at.desc()
-    ).offset(skip).limit(limit).all()
-    return history
-
-@app.get("/users/{user_id}/top-tracks", response_model=List[schema.TrackWithListenings], include_in_schema=False)
-def get_user_top_tracks(user_id: int, limit: int = 10, db: Session = Depends(get_db)):
-    """
-    Récupère les pistes les plus écoutées par l'utilisateur.
-    Caché de la doc (usage interne).
-    """
-    top_tracks = db.query(
-        models.Track,
-        models.UserTrackListening.nb_listening
-    ).join(
-        models.UserTrackListening,
-        models.Track.track_id == models.UserTrackListening.track_id
-    ).filter(
-        models.UserTrackListening.user_id == user_id
-    ).options(joinedload(models.Track.artists)).order_by(
-        models.UserTrackListening.nb_listening.desc()
-    ).limit(limit).all()
-    
-    result = []
-    for track, nb_listening in top_tracks:
-        track_dict = {
-            "track_id": track.track_id,
-            "track_title": track.track_title,
-            "track_duration": track.track_duration,
-            "track_listens": track.track_listens,
-            "track_favorites": track.track_favorites,
-            "track_interest": track.track_interest,
-            "track_date_created": track.track_date_created,
-            "track_date_recorded": track.track_date_recorded,
-            "track_composer": track.track_composer,
-            "nb_listening": nb_listening,
-            "artists": track.artists
-        }
-        result.append(track_dict)
-    return result
-
-@app.get("/users/{user_id}/top-albums", response_model=List[schema.AlbumWithListenings], include_in_schema=False)
-def get_user_top_albums(user_id: int, limit: int = 10, db: Session = Depends(get_db)):
-    """
-    Récupère les albums les plus écoutés par l'utilisateur.
-    Caché de la doc (usage interne).
-    """
-    top_albums = db.query(
-        models.Album,
-        models.UserAlbumListening.nb_listening
-    ).join(
-        models.UserAlbumListening,
-        models.Album.album_id == models.UserAlbumListening.album_id
-    ).filter(
-        models.UserAlbumListening.user_id == user_id
-    ).options(joinedload(models.Album.tracks)).order_by(
-        models.UserAlbumListening.nb_listening.desc()
-    ).limit(limit).all()
-    
-    result = []
-    for album, nb_listening in top_albums:
-        album_dict = {
-            "album_id": album.album_id,
-            "album_title": album.album_title,
-            "album_handle": album.album_handle,
-            "album_information": album.album_information,
-            "album_date_released": album.album_date_released,
-            "album_listens": album.album_listens,
-            "album_favorites": album.album_favorites,
-            "album_producer": album.album_producer,
-            "album_image_file": album.album_image_file,
-            "nb_listening": nb_listening,
-            "tracks": album.tracks
-        }
-        result.append(album_dict)
-    return result
-
-@app.get("/users/{user_id}/listening-stats", response_model=schema.UserListeningStats, include_in_schema=False)
-def get_user_listening_stats(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les statistiques globales d'écoute de l'utilisateur.
-    Caché de la doc (pour page statistiques).
-    """
-    from sqlalchemy import func
-    
-    # Total écoutes pistes
-    total_tracks = db.query(func.sum(models.UserTrackListening.nb_listening)).filter(
-        models.UserTrackListening.user_id == user_id
-    ).scalar() or 0
-    
-    # Total écoutes albums
-    total_albums = db.query(func.sum(models.UserAlbumListening.nb_listening)).filter(
-        models.UserAlbumListening.user_id == user_id
-    ).scalar() or 0
-    
-    # Total écoutes playlists
-    total_playlists = db.query(func.sum(models.UserPlaylistListening.nb_listening)).filter(
-        models.UserPlaylistListening.user_id == user_id
-    ).scalar() or 0
-    
-    # Nombre de pistes uniques écoutées
-    unique_tracks = db.query(func.count(models.UserTrackListening.track_id)).filter(
-        models.UserTrackListening.user_id == user_id
-    ).scalar() or 0
-    
-    # Nombre d'albums uniques écoutés
-    unique_albums = db.query(func.count(models.UserAlbumListening.album_id)).filter(
-        models.UserAlbumListening.user_id == user_id
-    ).scalar() or 0
-    
-    # Nombre de playlists uniques écoutées
-    unique_playlists = db.query(func.count(models.UserPlaylistListening.playlist_id)).filter(
-        models.UserPlaylistListening.user_id == user_id
-    ).scalar() or 0
-    
-    return {
-        "total_track_listenings": total_tracks,
-        "total_album_listenings": total_albums,
-        "total_playlist_listenings": total_playlists,
-        "total_unique_tracks": unique_tracks,
-        "total_unique_albums": unique_albums,
-        "total_unique_playlists": unique_playlists
-    }
-
-@app.get("/users/{user_id}/stats", response_model=schema.StatsUser, include_in_schema=False)
-def get_user_stats(user_id: int, db: Session = Depends(get_db)):
-    """
-    Récupère les affinités musicales calculées de l'utilisateur.
-    Caché de la doc (pour graphique profil musical).
-    """
-    stats = db.query(models.StatsUser).filter(models.StatsUser.user_id == user_id).first()
-    if not stats:
-        raise HTTPException(status_code=404, detail="Stats utilisateur non trouvées")
-    return stats
-
-
-###########################################
-##              POST                     ##
-###########################################
+####### POST ##
 
 @app.post("/user", status_code=201)
 def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
-    new_user = User(**user_data.model_dump())
+
+    user_dict = user_data.model_dump()
+
+    user_dict["user_mdp"] = hash_password(user_dict["user_mdp"])
+
+    new_user = User(**user_dict)
     
     db.add(new_user)
     db.commit()
@@ -314,8 +177,13 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 @app.post("/playlist", status_code=201)
-def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db)):
-    new_playlist = Playlist(**playlist_data.model_dump())
+def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    playlist_dict = playlist_data.model_dump()
+
+    playlist_dict["user_id"] = current_user.user_id
+    
+    new_playlist = Playlist(**playlist_dict)
     
     db.add(new_playlist)
     db.commit()
@@ -324,8 +192,13 @@ def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db)
     return new_playlist
 
 @app.post("/listeningHistory", status_code=201)
-def create_listening_history(listening_history_data: ListeningHistoryCreate, db: Session = Depends(get_db)):
-    new_listening_history = ListeningHistory(**listening_history_data.model_dump())
+def create_listening_history(listening_history_data: ListeningHistoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    playlist_dict = listening_history_data.model_dump()
+    
+    playlist_dict["user_id"] = current_user.user_id
+
+    new_listening_history = ListeningHistory(**playlist_dict)
     
     db.add(new_listening_history)
     db.commit()
@@ -334,8 +207,13 @@ def create_listening_history(listening_history_data: ListeningHistoryCreate, db:
     return new_listening_history
 
 @app.post("/UserAlbumListening", status_code=201)
-def create_user_album_listening(user_album_listening_data: UserAlbumListeningCreate, db: Session = Depends(get_db)):
-    new_user_album_listening = UserAlbumListening(**user_album_listening_data.model_dump())
+def create_user_album_listening(user_album_listening_data: UserAlbumListeningCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    user_album_listening_dict = user_album_listening_data.model_dump()
+    
+    user_album_listening_dict["user_id"] = current_user.user_id
+    
+    new_user_album_listening = UserAlbumListening(**user_album_listening_dict)
     
     db.add(new_user_album_listening)
     db.commit()
@@ -344,8 +222,13 @@ def create_user_album_listening(user_album_listening_data: UserAlbumListeningCre
     return new_user_album_listening
 
 @app.post("/UserPlaylistListening", status_code=201)
-def create_user_playlist_listening(user_album_listening_data: UserPlaylistListeningCreate, db: Session = Depends(get_db)):
-    new_user_playlist_listening = UserPlaylistListening(**user_album_listening_data.model_dump())
+def create_user_playlist_listening(user_playlist_listening_data: UserPlaylistListeningCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    user_playlist_listening_dict = user_playlist_listening_data.model_dump()
+    
+    user_playlist_listening_dict["user_id"] = current_user.user_id
+    
+    new_user_playlist_listening = UserPlaylistListening(**user_playlist_listening_dict)
     
     db.add(new_user_playlist_listening)
     db.commit()
@@ -354,8 +237,13 @@ def create_user_playlist_listening(user_album_listening_data: UserPlaylistListen
     return new_user_playlist_listening
 
 @app.post("/PlaylistUserFavorite", status_code=201)
-def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavoriteCreate, db: Session = Depends(get_db)):
-    new_playlist_user_favorite = PlaylistUserFavorite(**playlist_user_favorite_data.model_dump())
+def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    playlist_user_favorite_dict = playlist_user_favorite_data.model_dump()
+    
+    playlist_user_favorite_dict["user_id"] = current_user.user_id
+    
+    new_playlist_user_favorite = PlaylistUserFavorite(**playlist_user_favorite_dict)
     
     db.add(new_playlist_user_favorite)
     db.commit()
@@ -364,8 +252,13 @@ def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavor
     return new_playlist_user_favorite
 
 @app.post("/TrackUserFavorite", status_code=201)
-def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db)):
-    new_track_user_favorite = TrackUserFavorite(**track_user_favorite_data.model_dump())
+def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    track_user_favorite_dict = track_user_favorite_data.model_dump()
+    
+    track_user_favorite_dict["user_id"] = current_user.user_id
+    
+    new_track_user_favorite = TrackUserFavorite(**track_user_favorite_dict)
     
     db.add(new_track_user_favorite)
     db.commit()
@@ -374,8 +267,13 @@ def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate
     return new_track_user_favorite
 
 @app.post("/UserArtistFavorite", status_code=201)
-def create_user_artist_favorite(user_artist_favorite_data: UserArtistFavoriteCreate, db: Session = Depends(get_db)):
-    new_user_artist_favorite = UserArtistFavorite(**user_artist_favorite_data.model_dump())
+def create_user_artist_favorite(user_artist_favorite_data: UserArtistFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    user_artist_favorite_dict = user_artist_favorite_data.model_dump()
+    
+    user_artist_favorite_dict["user_id"] = current_user.user_id
+    
+    new_user_artist_favorite = UserArtistFavorite(**user_artist_favorite_dict)
     
     db.add(new_user_artist_favorite)
     db.commit()
@@ -384,8 +282,13 @@ def create_user_artist_favorite(user_artist_favorite_data: UserArtistFavoriteCre
     return new_user_artist_favorite
 
 @app.post("/UserAlbumFavorite", status_code=201)
-def create_user_album_favorite(user_album_favorite_data: UserAlbumFavoriteCreate, db: Session = Depends(get_db)):
-    new_user_album_favorite = UserAlbumFavorite(**user_album_favorite_data.model_dump())
+def create_user_album_favorite(user_album_favorite_data: UserAlbumFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    user_album_favorite_dict = user_album_favorite_data.model_dump()
+    
+    user_album_favorite_dict["user_id"] = current_user.user_id
+    
+    new_user_album_favorite = UserAlbumFavorite(**user_album_favorite_dict)
     
     db.add(new_user_album_favorite)
     db.commit()
@@ -394,8 +297,13 @@ def create_user_album_favorite(user_album_favorite_data: UserAlbumFavoriteCreate
     return new_user_album_favorite
 
 @app.post("/PlaylistUser", status_code=201)
-def create_playlist_user(playlist_user_data: PlaylistUserCreate, db: Session = Depends(get_db)):
-    new_playlist_user = PlaylistUser(**playlist_user_data.model_dump())
+def create_playlist_user(playlist_user_data: PlaylistUserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    playlist_user_dict = playlist_user_data.model_dump()
+    
+    playlist_user_dict["user_id"] = current_user.user_id
+    
+    new_playlist_user = PlaylistUser(**playlist_user_dict)
     
     db.add(new_playlist_user)
     db.commit()
@@ -404,7 +312,8 @@ def create_playlist_user(playlist_user_data: PlaylistUserCreate, db: Session = D
     return new_playlist_user
 
 @app.post("/PlaylistTrack", status_code=201)
-def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session = Depends(get_db)):
+def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
     new_playlist_track = PlaylistTrack(**playlist_track_data.model_dump())
     
     db.add(new_playlist_track)
@@ -414,9 +323,48 @@ def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session 
     return new_playlist_track
 
 
-###########################################
-##              DELETE                   ##
-###########################################
+####### PATCH ##
+
+@app.patch("/user/{user_id}")
+def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_user = db.query(User).filter(User.user_id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    if not verify_password(user_data.current_password, db_user.user_mdp):
+        raise HTTPException(status_code=401, detail="Mot de passe actuel incorrect")
+
+    update_info = user_data.model_dump(exclude_unset=True, exclude={"current_password"})
+
+    for key, value in update_info.items():
+        if key == "new_mdp":
+            db_user.user_mdp = hash_password(value)
+        else:
+            setattr(db_user, key, value)
+
+    db.commit()
+    return {"status": "success"}
+
+@app.patch("/playlist/{playlist_id}")
+def update_playlist(playlist_id: int, playlist_data: PlaylistUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_playlist = db.query(Playlist).filter(Playlist.playlist_id == playlist_id).first()
+    
+    if not db_playlist:
+        raise HTTPException(status_code=404, detail="Playlist non trouvé")
+
+    if db_playlist.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Ce n'est pas votre playlist !")
+
+    update_info = playlist_data.model_dump(exclude_unset=True)
+
+    for key, value in update_info.items():
+        setattr(db_playlist, key, value)
+
+    db.commit()
+    return {"status": "success"}
+
+
+####### DELETE ##
 
 @app.delete("/user/{user_id}", status_code=200)
 def anonymize_user(user_id: int, db: Session = Depends(get_db)):
@@ -513,12 +461,10 @@ def remove_track_from_playlist(playlist_id: int, track_id: int, db: Session = De
     db.commit()
     return {"message": "Piste retirée de la playlist"}
 
-
 ###########################################
 ##      AUTORISATIONS & LANCEMENT        ##
 ###########################################
 
-# --- Configuration CORS ---
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",

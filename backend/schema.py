@@ -37,32 +37,6 @@ class TrackBase(BaseModel):
     track_date_recorded: Optional[date] = None
     track_composer: Optional[str] = None
 
-# ==================== Genre Schemas ====================
-
-class GenreBase(BaseModel):
-    genre_title: Optional[str] = None
-    genre_handle: Optional[str] = None
-    genre_nb_tracks: Optional[int] = None
-    genre_parent_id: Optional[int] = None
-
-class Genre(GenreBase):
-    genre_id: int
-
-    class Config:
-        from_attributes = True
-
-# ==================== Tag Schemas ====================
-
-class TagBase(BaseModel):
-    tag_name: Optional[str] = None
-
-class Tag(TagBase):
-    tag_id: int
-
-    class Config:
-        from_attributes = True
-
-
 # ==================== Extended Schemas (with relations) ====================
 
 class Artist(ArtistBase):
@@ -131,40 +105,7 @@ class Playlist(PlaylistBase):
 
     class Config:
         from_attributes = True
-
-# ==================== User Stats Schemas ====================
-
-class StatsUser(BaseModel):
-    """Affinités musicales calculées d'un utilisateur."""
-    stat_user_id: int
-    danceability_affinity: Optional[float] = None
-    energy_affinity: Optional[float] = None
-    instrumentalness_affinity: Optional[float] = None
-    liveness_affinity: Optional[float] = None
-    speechness_affinity: Optional[float] = None
-    tempo_affinity: Optional[float] = None
-    valence_affinity: Optional[float] = None
-    currency_affinity: Optional[float] = None
-    hotness_affinity: Optional[float] = None
-    user_id: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
-# ==================== Listening History Schemas ====================
-
-class ListeningHistoryBase(BaseModel):
-    history_id: int
-    user_id: Optional[int] = None
-    playlist_id: Optional[int] = None
-    listened_at: datetime
-
-class ListeningHistory(ListeningHistoryBase):
-    """Historique d'écoute avec détails de la playlist."""
-    playlist: Optional[PlaylistBase] = None
-
-    class Config:
-        from_attributes = True
+    
 
 # ==================== Listening Stats Schemas ====================
 
@@ -217,60 +158,50 @@ class UserCreate(BaseModel):
 
 class PlaylistCreate(BaseModel):
     playlist_name: str
-    user_id: int
 
 # ==================== ListeningHistory Schemas =========
 
 class ListeningHistoryCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== UserTrackListening Schemas =======
 
 class UserTrackListeningCreate(BaseModel):
-    user_id: int
     track_id: int
 
 # ==================== UserAlbumListening Schemas =======
 
 class UserAlbumListeningCreate(BaseModel):
-    user_id: int
     album_id: int
 
 # ==================== UserPlaylistListening Schemas ====
 
 class UserPlaylistListeningCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== PlaylistUserFavorite Schemas =====
 
 class PlaylistUserFavoriteCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== TrackUserFavorite Schemas ========
 
 class TrackUserFavoriteCreate(BaseModel):
-    user_id: int
     track_id: int
 
 # ==================== UserArtistFavorite Schemas =======
 
 class UserArtistFavoriteCreate(BaseModel):
     artist_id: int
-    user_id: int
 
 # ==================== UserAlbumFavorite Schemas ========
 
 class UserAlbumFavoriteCreate(BaseModel):
-    user_id: int
     album_id: int
 
 # ==================== PlaylistUser Schemas =============
 
 class PlaylistUserCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== PlaylistTrack Schemas ============
@@ -278,3 +209,22 @@ class PlaylistUserCreate(BaseModel):
 class PlaylistTrackCreate(BaseModel):
     playlist_id: int
     track_id: int
+
+
+##########################################
+##            SCHÉMAS PATCH             ##
+##########################################
+
+class UserUpdate(BaseModel):
+    image: Optional[str] = None
+    pseudo: Optional[str] = None
+    user_mdp: Optional[str] = None
+    user_gender: Optional[str] = None # char
+    situation_name: Optional[str] = None
+    frequency_interval: Optional[str] = None
+
+class PlaylistUpdate(BaseModel):
+    playlist_id: Optional[int]
+    playlist_name: Optional[str]
+    playlist_listens: Optional[int]
+    
