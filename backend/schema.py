@@ -107,6 +107,36 @@ class Playlist(PlaylistBase):
         from_attributes = True
     
 
+# ==================== Listening Stats Schemas ====================
+
+class TrackWithListenings(TrackBase):
+    """Piste avec nombre d'écoutes de l'utilisateur."""
+    track_id: int
+    nb_listening: int
+    artists: List[ArtistBase] = []
+
+    class Config:
+        from_attributes = True
+
+class AlbumWithListenings(AlbumBase):
+    """Album avec nombre d'écoutes de l'utilisateur."""
+    album_id: int
+    nb_listening: int
+    tracks: List[TrackBase] = []
+
+    class Config:
+        from_attributes = True
+
+class UserListeningStats(BaseModel):
+    """Statistiques globales d'écoute d'un utilisateur."""
+    total_track_listenings: int
+    total_album_listenings: int
+    total_playlist_listenings: int
+    total_unique_tracks: int
+    total_unique_albums: int
+    total_unique_playlists: int
+    
+
 ##########################################
 ##             SCHÉMAS POST             ##
 ##########################################
@@ -116,10 +146,10 @@ class Playlist(PlaylistBase):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    login: str
-    password: str
+    user_login: str
+    user_mdp: str
     pseudo: Optional[str] = None
-    gender: Optional[str] = None
+    user_gender: Optional[str] = None
     birth_year: Optional[date] = None
     situation_name: Optional[str] = None
     frequency_interval: Optional[str] = None
@@ -128,60 +158,50 @@ class UserCreate(BaseModel):
 
 class PlaylistCreate(BaseModel):
     playlist_name: str
-    user_id: int
 
 # ==================== ListeningHistory Schemas =========
 
 class ListeningHistoryCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== UserTrackListening Schemas =======
 
 class UserTrackListeningCreate(BaseModel):
-    user_id: int
     track_id: int
 
 # ==================== UserAlbumListening Schemas =======
 
 class UserAlbumListeningCreate(BaseModel):
-    user_id: int
     album_id: int
 
 # ==================== UserPlaylistListening Schemas ====
 
 class UserPlaylistListeningCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== PlaylistUserFavorite Schemas =====
 
 class PlaylistUserFavoriteCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== TrackUserFavorite Schemas ========
 
 class TrackUserFavoriteCreate(BaseModel):
-    user_id: int
     track_id: int
 
 # ==================== UserArtistFavorite Schemas =======
 
 class UserArtistFavoriteCreate(BaseModel):
     artist_id: int
-    user_id: int
 
 # ==================== UserAlbumFavorite Schemas ========
 
 class UserAlbumFavoriteCreate(BaseModel):
-    user_id: int
     album_id: int
 
 # ==================== PlaylistUser Schemas =============
 
 class PlaylistUserCreate(BaseModel):
-    user_id: int
     playlist_id: int
 
 # ==================== PlaylistTrack Schemas ============
@@ -189,3 +209,22 @@ class PlaylistUserCreate(BaseModel):
 class PlaylistTrackCreate(BaseModel):
     playlist_id: int
     track_id: int
+
+
+##########################################
+##            SCHÉMAS PATCH             ##
+##########################################
+
+class UserUpdate(BaseModel):
+    image: Optional[str] = None
+    pseudo: Optional[str] = None
+    user_mdp: Optional[str] = None
+    user_gender: Optional[str] = None # char
+    situation_name: Optional[str] = None
+    frequency_interval: Optional[str] = None
+
+class PlaylistUpdate(BaseModel):
+    playlist_id: Optional[int]
+    playlist_name: Optional[str]
+    playlist_listens: Optional[int]
+    
