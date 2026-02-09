@@ -53,7 +53,7 @@ db_host = os.getenv("DB_HOST", "localhost")
 DB_CONFIG = {
     "dbname": "postgres",
     "user": "postgres",
-    "password": "admin",
+    "password": "uJ7A\postgres",
     "host": "localhost",
     "port": "5432"
 }
@@ -447,11 +447,11 @@ def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session 
 @app.post("/userTrackListening", status_code=201)
 def create_user_track_listening_create(user_track_listening_data: UserTrackListeningCreate, db: Session = Depends(get_db), current_user: UserTrackListening = Depends(get_current_user)):
     
-    playlist_user_dict = user_track_listening_data.model_dump()
+    user_track_listening_dict = user_track_listening_data.model_dump()
     
-    playlist_user_dict["user_id"] = current_user.user_id
+    user_track_listening_dict["user_id"] = current_user.user_id
     
-    new_user_track_listening_create = PlaylistTrack(**playlist_user_dict.model_dump())
+    new_user_track_listening_create = UserTrackListening(**user_track_listening_dict)
     
     db.add(new_user_track_listening_create)
     db.commit()
@@ -573,7 +573,7 @@ def anonymize_user(user_id: int, db: Session = Depends(get_db), current_user: Us
     
     if user.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que votre propre compte")
-    
+ 
     # Anonymisation des données identifiables
     user.email = f"deleted_user_{user_id}@anonyme.fr"
     user.user_login = f"deleted_user_{user_id}"
