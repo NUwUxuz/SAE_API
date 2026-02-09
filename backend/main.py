@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
@@ -8,8 +9,10 @@ import bcrypt
 from models import ( 
     Album, User, Playlist, Track, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack, UserTrackListening
+    PlaylistTrack, UserTrackListening, SearchHistory
 )
+
+import schema
 
 from schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
@@ -172,6 +175,111 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db), current_user: Us
         raise HTTPException(status_code=403, detail="Vous ne pouvez accéder qu'à votre propre compte")
     
     return user
+
+####### RECOMMANDATIONS IA ##
+
+# Import lazy du recommandeur (évite le chargement si pas utilisé)
+_recommender = None
+
+def get_recommender():
+    """Charge le recommandeur à la première utilisation"""
+    global _recommender
+    if _recommender is None:
+        try:
+            from recommender.gru_model import MusicRecommender
+            _recommender = MusicRecommender()
+        except Exception as e:
+            print(f" Recommandeur non disponible : {e}")
+            return None
+    return _recommender
+
+@app.get("/users/{user_id}/recommendations")
+def get_user_recommendations(
+    user_id: int, 
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Génère des recommandations musicales personnalisées basées sur l'historique de recherche.
+    Utilise un modèle GRU + BERT pour l'analyse sémantique.
+    """
+    
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Vous ne pouvez accéder qu'à vos propres recommandations")
+    
+    # Récupération du recommandeur
+    recommender = get_recommender()
+    if recommender is None or not recommender.is_ready:
+        raise HTTPException(
+            status_code=503, 
+            detail="Service de recommandation indisponible"
+        )
+    
+    # Récupération des 20 dernières recherches (du plus récent au plus ancien)
+    search_results = db.query(SearchHistory.history_query).filter(
+        SearchHistory.user_id == user_id
+    ).order_by(
+        SearchHistory.history_timestamp.desc()
+    ).limit(20).all()
+    
+    if not search_results:
+        raise HTTPException(
+            status_code=404, 
+            detail="Pas d'historique de recherche pour cet utilisateur"
+        )
+    
+    # Extraction des strings et inversion pour ordre chronologique
+    history = [row[0] for row in search_results if row[0]]
+    history.reverse()
+    
+    # Prédiction via le modèle GRU
+    track_ids = recommender.predict(history, top_k=limit)
+    
+    return {"recommended_track_ids": track_ids}
+
+@app.get("/users/{user_id}/recommendations/detailed", response_model=List[schema.Track])
+def get_user_recommendations_detailed(
+    user_id: int, 
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Version détaillée : Renvoie les objets Track complets (pour affichage playlist direct).
+    """
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Vous ne pouvez accéder qu'à vos propres recommandations")
+    
+    recommender = get_recommender()
+    if recommender is None or not recommender.is_ready:
+        raise HTTPException(status_code=503, detail="Service de recommandation indisponible")
+    
+    search_results = db.query(SearchHistory.history_query).filter(
+        SearchHistory.user_id == user_id
+    ).order_by(SearchHistory.history_timestamp.desc()).limit(20).all()
+    
+    if not search_results:
+        # Pas d'historique -> Pas de reco (liste vide)
+        return []
+    
+    history = [row[0] for row in search_results if row[0]]
+    history.reverse()
+    
+    # 2. Prédiction des IDs
+    track_ids = recommender.predict(history, top_k=limit)
+    
+    if not track_ids:
+        return []
+
+    # 3. Récupération des objets complets depuis la BDD
+    tracks_db = db.query(Track).filter(Track.track_id.in_(track_ids)).all()
+    
+    # 4. Réordonner selon le score de pertinence (car SQL IN casse l'ordre)
+    tracks_dict = {t.track_id: t for t in tracks_db}
+    ordered_tracks = [tracks_dict[tid] for tid in track_ids if tid in tracks_dict]
+    
+    return ordered_tracks
 
 ####### POST ##
 
