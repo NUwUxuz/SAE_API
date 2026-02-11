@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from typing import List
+from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 import bcrypt
 
 from models import ( 
-    Album, User, Playlist, Track, ListeningHistory, UserAlbumListening, UserPlaylistListening,
+    Album, User, Playlist, Track, Artist, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
     PlaylistTrack, UserTrackListening, SearchHistory
 )
@@ -130,11 +130,34 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 ######## GET ##
 
-@app.get("/album") 
-def get_all_albums(db: Session = Depends(get_db)):
-    return db.query(Album).all()
+@app.get("/artist") 
+def get_all_artists(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Artist)
+    
+    if limit is not None:
+        query = query.limit(limit)
+    
+    return query.all()
 
-@app.get("/album/{album_id}") 
+@app.get("/artist/{artist_id}", response_model=List[schema.Artist]) 
+def get_one_artist(artist_id: int, db: Session = Depends(get_db)):
+    artist = db.query(Artist).filter(Artist.artist_id == artist_id).first()
+    
+    if artist is None:
+        raise HTTPException(status_code=404, detail="Album non trouvé")
+        
+    return artist
+
+@app.get("/album") 
+def get_all_albums(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Album)
+    
+    if limit is not None:
+        query = query.limit(limit)
+    
+    return query.all()
+
+@app.get("/album/{album_id}", response_model=List[schema.Album]) 
 def get_one_album(album_id: int, db: Session = Depends(get_db)):
     album = db.query(Album).filter(Album.album_id == album_id).first()
     
@@ -143,9 +166,14 @@ def get_one_album(album_id: int, db: Session = Depends(get_db)):
         
     return album
 
-@app.get("/track") 
-def get_all_track(db: Session = Depends(get_db)):
-    return db.query(Track).all()
+@app.get("/track", response_model=List[schema.Track]) 
+def get_all_track(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Track)
+    
+    if limit is not None:
+        query = query.limit(limit)
+    
+    return query.all()
 
 @app.get("/playlist") 
 def get_all_track(db: Session = Depends(get_db)):

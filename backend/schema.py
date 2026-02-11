@@ -41,21 +41,18 @@ class TrackBase(BaseModel):
 
 class Artist(ArtistBase):
     artist_id: int
-    albums: List[AlbumBase] = []
 
     class Config:
         from_attributes = True
 
 class Album(AlbumBase):
     album_id: int
-    tracks: List[TrackBase] = []
     
     class Config:
         from_attributes = True
 
 class Track(TrackBase):
     track_id: int
-    artists: List[ArtistBase] = []
     
     class Config:
         from_attributes = True
