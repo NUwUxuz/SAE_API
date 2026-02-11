@@ -1,4 +1,4 @@
-type Page = 'acceuil' | 'detail_compte' | 'CGU' | 'contact' | 'mentions_legales'
+type Page = 'accueil' | 'detail_compte' | 'CGU' | 'contact' | 'mentions_legales'
 type HeaderProps = {
   onNavigate: (page: Page) => void
 }
