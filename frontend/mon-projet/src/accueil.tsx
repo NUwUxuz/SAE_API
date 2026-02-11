@@ -13,7 +13,6 @@ type AccueilProps = {
 
 
 
- 
 export default function Accueil( {isConnected = false} : AccueilProps)  {
   const chansons = getChansons()
 
