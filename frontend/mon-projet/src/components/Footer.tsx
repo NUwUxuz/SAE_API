@@ -7,9 +7,9 @@ function Footer({ onNavigate }: HeaderProps): JSX.Element {
   return (
     <footer className="footer">
       <nav className="footer-links">
-        <button onClick={() => onNavigate("CGU")}>CGU</button>
+        <button onClick={() => {window.scrollTo({ top: 0, left: 0}), onNavigate("CGU")}}>CGU</button>
         <button onClick={() => onNavigate("contact")}>Contact</button>
-        <button onClick={() => onNavigate("mentions_legales")}>Mentions Légales</button>
+        <button onClick={() => {window.scrollTo({ top: 0, left: 0}), onNavigate("mentions_legales")}}>Mentions Légales</button>
       </nav>
 
       <p className="footer-copy">
