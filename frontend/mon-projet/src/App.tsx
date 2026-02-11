@@ -69,7 +69,7 @@ function App(): JSX.Element {
 
       {/* {page === "contact" && <Contact />} */}
 
-      {page === "CGU" && <MentionsLegales />}
+      {page === "mentions_legales" && <MentionsLegales />}
 
       <Footer onNavigate={setPage} />
     </>
