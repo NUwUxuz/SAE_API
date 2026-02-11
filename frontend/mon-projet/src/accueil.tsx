@@ -40,7 +40,22 @@ export default function Accueil( {isConnected = false} : AccueilProps)  {
 
   return (
     <>
+    <div className="accueil-layout">
+     <nav className="menu-favoris">
+        <ul className="list-aime">
+            <li>Écouté récemment</li>
+            <li>Titres aimés</li>
+            <li>Albums</li>
+            <li>Artistes</li>
+        </ul>
 
+        <button className="btn-add-playlist">
+            Ajouter une Playlist
+        </button>
+
+      <ul className="list-playlist"></ul>
+    </nav>
+    <main className="accueil-content">
 
       <h2>Musiques recommandées</h2>
       <Carousel>
@@ -80,6 +95,8 @@ export default function Accueil( {isConnected = false} : AccueilProps)  {
           />
         ))}
       </Carousel>
+      </main>
+    </div>
     </>
   )
 }
