@@ -4,8 +4,6 @@ from sqlalchemy import (
     ForeignKey, MetaData, func, text
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from pydantic import BaseModel, EmailStr
-from datetime import date, datetime
 
 # Configuration du schéma "sae" par défaut
 metadata_obj = MetaData(schema="sae")
@@ -146,9 +144,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     image: Mapped[Optional[str]] = mapped_column(String(255))
     pseudo: Mapped[Optional[str]] = mapped_column(String(50))
-    login: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    mdp: Mapped[str] = mapped_column(String(64), nullable=False)
-    gender: Mapped[Optional[str]] = mapped_column(String(1)) # char
+    user_login: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    user_mdp: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_gender: Mapped[Optional[str]] = mapped_column(String(1)) # char
     birth_year: Mapped[Optional[Date]] = mapped_column(Date)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
     situation_name: Mapped[Optional[str]] = mapped_column(String(50))
@@ -189,6 +187,9 @@ class ListeningHistory(Base):
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"))
     playlist_id: Mapped[Optional[int]] = mapped_column(ForeignKey('sae.playlist.playlist_id', ondelete="CASCADE"))
     listened_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+    # Relations
+    playlist = relationship("Playlist")
 
 # =================================================================================
 # |-                        Relations (Tables de liaison)
@@ -311,13 +312,13 @@ class UserAlbumListening(Base):
     __tablename__ = 'user_album_listening'
     user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
     album_id: Mapped[int] = mapped_column(ForeignKey('sae.album.album_id', ondelete="CASCADE"), primary_key=True)
-    nb_listening: Mapped[Optional[int]] = mapped_column(Integer)
+    nb_listening: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 class UserPlaylistListening(Base):
     __tablename__ = 'user_playlist_listening'
     user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
     playlist_id: Mapped[int] = mapped_column(ForeignKey('sae.playlist.playlist_id', ondelete="CASCADE"), primary_key=True)
-    nb_listening: Mapped[Optional[int]] = mapped_column(Integer)
+    nb_listening: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 # =================================================================================
 # |-                                    Vues
@@ -349,23 +350,24 @@ class ViewTrackMaterialise(Base):
     track_composer: Mapped[Optional[str]] = mapped_column(String(100))
     track_lyricist: Mapped[Optional[str]] = mapped_column(String(100))
     track_publisher: Mapped[Optional[str]] = mapped_column(String(100))
-    license_id: Mapped[Optional[int]] = mapped_column(Integer)
+    # license_id: Mapped[Optional[int]] = mapped_column(Integer)
     album_id: Mapped[Optional[int]] = mapped_column(Integer)
     album_title: Mapped[Optional[str]] = mapped_column(String(255))
     album_handle: Mapped[Optional[str]] = mapped_column(String(255))
     album_information: Mapped[Optional[str]] = mapped_column(Text)
+    album_image_file: Mapped[Optional[str]] = mapped_column(String(255))
     album_date_created: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     album_date_released: Mapped[Optional[Date]] = mapped_column(Date)
     album_engineer: Mapped[Optional[str]] = mapped_column(String(255))
     album_producer: Mapped[Optional[str]] = mapped_column(String(255))
     artist_id: Mapped[Optional[int]] = mapped_column(Integer)
     artist_name: Mapped[Optional[str]] = mapped_column(String(50))
-    tags_list: Mapped[Optional[str]] = mapped_column(Text)
-    genres_list: Mapped[Optional[str]] = mapped_column(Text)
-    danceability: Mapped[Optional[float]] = mapped_column(Float)
-    energy: Mapped[Optional[float]] = mapped_column(Float)
-    tempo: Mapped[Optional[float]] = mapped_column(Float)
-    languages_list: Mapped[Optional[str]] = mapped_column(Text)
+    # tags_list: Mapped[Optional[str]] = mapped_column(Text)
+    # genres_list: Mapped[Optional[str]] = mapped_column(Text)
+    # danceability: Mapped[Optional[float]] = mapped_column(Float)
+    # energy: Mapped[Optional[float]] = mapped_column(Float)
+    # tempo: Mapped[Optional[float]] = mapped_column(Float)
+    # languages_list: Mapped[Optional[str]] = mapped_column(Text)
 
 class ViewFavoriteListens(Base):
     __tablename__ = 'view_favorite_listens'
@@ -383,18 +385,3 @@ class ViewFavoriteListens(Base):
     playlist_listens: Mapped[Optional[int]] = mapped_column(Integer)
     playlist_favorites: Mapped[Optional[int]] = mapped_column(Integer)
 
-
-
-class UserCreate(BaseModel):
-    email: EmailStr
-    login: str
-    password: str
-    pseudo: Optional[str] = None
-    gender: Optional[str] = None
-    birth_year: Optional[date] = None
-    situation_name: Optional[str] = None
-    frequency_interval: Optional[str] = None
-
-class PlaylistCreate(BaseModel):
-    playlist_name: str
-    user_id: int

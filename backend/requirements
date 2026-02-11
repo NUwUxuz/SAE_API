@@ -1,1 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pydantic[email]
 email-validator
+passlib[bcrypt]
+python-jose[cryptography]
+bcrypt
+python-multipart
+python-dotenv
+
+# AI & Recommendations
+sentence-transformers
+torch
+pandas
+scikit-learn
