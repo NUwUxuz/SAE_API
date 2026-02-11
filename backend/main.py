@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
@@ -6,15 +7,17 @@ from sqlalchemy import create_engine
 import bcrypt
 
 from models import ( 
-    Album, User, Playlist, Track, ListeningHistory, UserAlbumListening, UserPlaylistListening,
+    Album, User, Playlist, Track, Artist, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack, UserTrackListening
+    PlaylistTrack, UserTrackListening, SearchHistory
 )
+
+import schema
 
 from schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
     PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
-    PlaylistTrackCreate, UserTrackListeningCreate,
+    PlaylistTrackCreate, UserTrackListeningCreate, SearchHistoryCreate,
 
     UserUpdate, PlaylistUpdate, UserTrackListeningUpdate, UserAlbumListeningUpdate, UserPlaylistListeningUpdate
 )
@@ -127,11 +130,34 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 ######## GET ##
 
-@app.get("/album") 
-def get_all_albums(db: Session = Depends(get_db)):
-    return db.query(Album).all()
+@app.get("/artist") 
+def get_all_artists(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Artist)
+    
+    if limit is not None:
+        query = query.limit(limit)
+    
+    return query.all()
 
-@app.get("/album/{album_id}") 
+@app.get("/artist/{artist_id}", response_model=List[schema.Artist]) 
+def get_one_artist(artist_id: int, db: Session = Depends(get_db)):
+    artist = db.query(Artist).filter(Artist.artist_id == artist_id).first()
+    
+    if artist is None:
+        raise HTTPException(status_code=404, detail="Album non trouvé")
+        
+    return artist
+
+@app.get("/album") 
+def get_all_albums(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Album)
+    
+    if limit is not None:
+        query = query.limit(limit)
+    
+    return query.all()
+
+@app.get("/album/{album_id}", response_model=List[schema.Album]) 
 def get_one_album(album_id: int, db: Session = Depends(get_db)):
     album = db.query(Album).filter(Album.album_id == album_id).first()
     
@@ -140,39 +166,126 @@ def get_one_album(album_id: int, db: Session = Depends(get_db)):
         
     return album
 
-@app.get("/track") 
-def get_all_track(db: Session = Depends(get_db)):
-    return db.query(Track).all()
+@app.get("/track", response_model=List[schema.Track]) 
+def get_all_track(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Track)
+    
+    if limit is not None:
+        query = query.limit(limit)
+    
+    return query.all()
 
 @app.get("/playlist") 
 def get_all_track(db: Session = Depends(get_db)):
     return db.query(Playlist).all()
 
 
-@app.get("/user/{email}")
-def get_user_by_email(email: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    user = db.query(User).filter(User.email == email).first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+@app.get("/user")
+def get_user_by_id(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = db.query(User).filter(User.user_id == current_user.user_id).first()
     
     if user.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Vous ne pouvez accéder qu'à votre propre compte")
     
     return user
 
-@app.get("/user/{user_id}")
-def get_user_by_id(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    user = db.query(User).filter(User.user_id == user_id).first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
-    
-    if user.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Vous ne pouvez accéder qu'à votre propre compte")
-    
-    return user
+####### RECOMMANDATIONS IA ##
 
+# Import lazy du recommandeur (évite le chargement si pas utilisé)
+_recommender = None
+
+def get_recommender():
+    """Charge le recommandeur à la première utilisation"""
+    global _recommender
+    if _recommender is None:
+        try:
+            from recommender.gru_model import MusicRecommender
+            _recommender = MusicRecommender()
+        except Exception as e:
+            print(f" Recommandeur non disponible : {e}")
+            return None
+    return _recommender
+
+@app.get("/users/gru_recommendations")
+def get_user_recommendations(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Génère des recommandations musicales personnalisées basées sur l'historique de recherche.
+    Utilise un modèle GRU + BERT pour l'analyse sémantique.
+    """
+    
+    # Récupération du recommandeur
+    recommender = get_recommender()
+    if recommender is None or not recommender.is_ready:
+        raise HTTPException(
+            status_code=503, 
+            detail="Service de recommandation indisponible"
+        )
+    
+    # Récupération des 20 dernières recherches (du plus récent au plus ancien)
+    search_results = db.query(SearchHistory.history_query).filter(
+        SearchHistory.user_id == current_user.user_id
+    ).order_by(
+        SearchHistory.history_timestamp.desc()
+    ).limit(20).all()
+    
+    if not search_results:
+        raise HTTPException(
+            status_code=404, 
+            detail="Pas d'historique de recherche pour cet utilisateur"
+        )
+    
+    # Extraction des strings et inversion pour ordre chronologique
+    history = [row[0] for row in search_results if row[0]]
+    history.reverse()
+    
+    # Prédiction via le modèle GRU
+    track_ids = recommender.predict(history, top_k=limit)
+    
+    return {"recommended_track_ids": track_ids}
+
+@app.get("/users/gru_recommendations/detailed", response_model=List[schema.Track])
+def get_user_recommendations_detailed(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Version détaillée : Renvoie les objets Track complets (pour affichage playlist direct).
+    """
+    
+    recommender = get_recommender()
+    if recommender is None or not recommender.is_ready:
+        raise HTTPException(status_code=503, detail="Service de recommandation indisponible")
+    
+    search_results = db.query(SearchHistory.history_query).filter(
+        SearchHistory.user_id == current_user.user_id
+    ).order_by(SearchHistory.history_timestamp.desc()).limit(20).all()
+    
+    if not search_results:
+        # Pas d'historique -> Pas de reco (liste vide)
+        return []
+    
+    history = [row[0] for row in search_results if row[0]]
+    history.reverse()
+    
+    # 2. Prédiction des IDs
+    track_ids = recommender.predict(history, top_k=limit)
+    
+    if not track_ids:
+        return []
+
+    # 3. Récupération des objets complets depuis la BDD
+    tracks_db = db.query(Track).filter(Track.track_id.in_(track_ids)).all()
+    
+    # 4. Réordonner selon le score de pertinence (car SQL IN casse l'ordre)
+    tracks_dict = {t.track_id: t for t in tracks_db}
+    ordered_tracks = [tracks_dict[tid] for tid in track_ids if tid in tracks_dict]
+    
+    return ordered_tracks
 
 ####### POST ##
 
@@ -338,7 +451,7 @@ def create_playlist_track(playlist_track_data: PlaylistTrackCreate, db: Session 
     return new_playlist_track
 
 @app.post("/userTrackListening", status_code=201)
-def create_user_track_listening_create(user_track_listening_data: UserTrackListeningCreate, db: Session = Depends(get_db), current_user: UserTrackListening = Depends(get_current_user)):
+def create_user_track_listening(user_track_listening_data: UserTrackListeningCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
     user_track_listening_dict = user_track_listening_data.model_dump()
     
@@ -351,6 +464,21 @@ def create_user_track_listening_create(user_track_listening_data: UserTrackListe
     db.refresh(new_user_track_listening_create)
     
     return new_user_track_listening_create
+
+@app.post("/SearchHistory", status_code=201)
+def create_search_history(search_history_data: SearchHistoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    search_history_dict = search_history_data.model_dump()
+    
+    search_history_dict["user_id"] = current_user.user_id
+    
+    new_search_history_create = SearchHistory(**search_history_dict)
+    
+    db.add(new_search_history_create)
+    db.commit()
+    db.refresh(new_search_history_create)
+    
+    return new_search_history_create
 
 
 ####### PATCH ##
@@ -453,23 +581,20 @@ def update_user_playlist_listening(playlist_id: int, user_playlist_listening_dat
 
 ####### DELETE ##
 
-@app.delete("/user/{user_id}", status_code=200)
-def anonymize_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.delete("/user", status_code=200)
+def anonymize_user(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Anonymise les données personnelles d'un utilisateur (RGPD - Droit à l'oubli).
     Les statistiques d'écoute sont conservées de manière anonyme.
     """
-    user = db.query(User).filter(User.user_id == user_id).first()
+    user = db.query(User).filter(User.user_id == current_user.user_id).first()
     
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
-    
-    if user.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que votre propre compte")
  
     # Anonymisation des données identifiables
-    user.email = f"deleted_user_{user_id}@anonyme.fr"
-    user.user_login = f"deleted_user_{user_id}"
+    user.email = f"deleted_user_{current_user.user_id}@anonyme.fr"
+    user.user_login = f"deleted_user_{current_user.user_id}"
     user.pseudo = f"Utilisateur supprimé"
     user.user_mdp = "ACCOUNT_DELETED" 
     user.image = None
@@ -479,55 +604,46 @@ def anonymize_user(user_id: int, db: Session = Depends(get_db), current_user: Us
     
     return {"message": "Données personnelles anonymisées conformément au RGPD"}
 
-@app.delete("/users/{user_id}/favorites/tracks/{track_id}", status_code=200)
-def remove_favorite_track(user_id: int, track_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.delete("/users/favorites/tracks/{track_id}", status_code=200)
+def remove_favorite_track(track_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Retire une piste des favoris de l'utilisateur."""
     favorite = db.query(TrackUserFavorite).filter(
-        TrackUserFavorite.user_id == user_id,
+        TrackUserFavorite.user_id == current_user.user_id,
         TrackUserFavorite.track_id == track_id
     ).first()
     
     if not favorite:
         raise HTTPException(status_code=404, detail="Favori non trouvé")
     
-    if favorite.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que vos propres favoris")
-    
     db.delete(favorite)
     db.commit()
     return {"message": "Titre retiré des favoris"}
 
-@app.delete("/users/{user_id}/favorites/artists/{artist_id}", status_code=200)
-def remove_favorite_artist(user_id: int, artist_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.delete("/users/favorites/artists/{artist_id}", status_code=200)
+def remove_favorite_artist(artist_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Retire un artiste des favoris de l'utilisateur."""
     favorite = db.query(UserArtistFavorite).filter(
-        UserArtistFavorite.user_id == user_id,
+        UserArtistFavorite.user_id == current_user.user_id,
         UserArtistFavorite.artist_id == artist_id
     ).first()
     
     if not favorite:
         raise HTTPException(status_code=404, detail="Favori non trouvé")
     
-    if favorite.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que vos propres favoris")
-    
     db.delete(favorite)
     db.commit()
     return {"message": "Artiste retiré des favoris"}
 
-@app.delete("/users/{user_id}/favorites/albums/{album_id}", status_code=200)
-def remove_favorite_album(user_id: int, album_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.delete("/users/favorites/albums/{album_id}", status_code=200)
+def remove_favorite_album(album_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Retire un album des favoris de l'utilisateur."""
     favorite = db.query(UserAlbumFavorite).filter(
-        UserAlbumFavorite.user_id == user_id,
+        UserAlbumFavorite.user_id == current_user.user_id,
         UserAlbumFavorite.album_id == album_id
     ).first()
     
     if not favorite:
         raise HTTPException(status_code=404, detail="Favori non trouvé")
-    
-    if favorite.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que vos propres favoris")
     
     db.delete(favorite)
     db.commit()
@@ -549,7 +665,7 @@ def delete_playlist(playlist_id: int, db: Session = Depends(get_db), current_use
     return {"message": "Playlist supprimée"}
 
 @app.delete("/playlists/{playlist_id}/tracks/{track_id}", status_code=200)
-def remove_track_from_playlist(playlist_id: int, track_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def remove_track_from_playlist(playlist_id: int, track_id: int, db: Session = Depends(get_db)):
     """Retire une piste d'une playlist."""
     link = db.query(PlaylistTrack).filter(
         PlaylistTrack.playlist_id == playlist_id,
