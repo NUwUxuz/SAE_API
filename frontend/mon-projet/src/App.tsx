@@ -10,6 +10,9 @@ import DetailCompte from "./detail_compte"
 import PageInstallation from "./installation"
 import Login from "./login"
 import Register from "./register"
+import CGU from "./CGU"
+// import Contact from "./contact"
+import MentionsLegales from "./mentions_legales"
 
 
 import type { Page } from "./types/Page"
@@ -20,6 +23,9 @@ import type { Page } from "./types/Page"
 //   | "page_installation"
 //   | "login"
 //   | "register"
+//   | "CGU"
+//   | "contact"
+//   | "mentions_legales"
 
 function App(): JSX.Element {
   const [page, setPage] = useState<Page>("accueil")
@@ -58,6 +64,12 @@ function App(): JSX.Element {
           onCancel={() => setPage("login")}
         />
       )}
+
+      {page === "CGU" && <CGU />}
+
+      {/* {page === "contact" && <Contact />} */}
+
+      {page === "mentions_legales" && <MentionsLegales />}
 
       <Footer onNavigate={setPage} />
     </>
