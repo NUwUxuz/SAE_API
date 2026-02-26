@@ -10,35 +10,29 @@ import DetailCompte from "./detail_compte"
 import PageInstallation from "./installation"
 import Login from "./login"
 import Register from "./register"
-import { getCurrentUser, logout } from "./services/authService"
-
-import type { Page } from "./types/Page"
 import CGU from "./CGU"
 import MentionsLegales from "./mentions_legales"
+
+import { getCurrentUser, logout } from "./services/authService"
+import type { Page } from "./types/Page"
 
 function App() {
   const [page, setPage] = useState<Page>("accueil")
 
-  // 🔐 état de connexion
+  // 🔐 État de connexion
   const [isConnected, setIsConnected] = useState<boolean>(false)
   const [userId, setUserId] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // Vérification de la session au chargement
-  useEffect(() => {
-    const token = localStorage.getItem("token")
-    if (token) {
-      getCurrentUser()
-        .then(user => {
-          setIsConnected(true)
-          setUserId(user.user_id)
-        })
-        .catch(() => {
-          logout()
-          setIsConnected(false)
-        })
-    }
-  }, [])
+  // 🚪 Fonction de déconnexion centralisée avec redirection
+  const handleLogout = () => {
+    logout() // Supprime le localStorage via authService
+    setIsConnected(false)
+    setUserId(null)
+    setPage("login") // Redirige vers login dès que la session est perdue
+  }
 
+  // 🚀 Gestion du succès de connexion
   const handleLoginSuccess = () => {
     setIsConnected(true)
     const storedId = localStorage.getItem("user_id")
@@ -46,43 +40,94 @@ function App() {
     setPage("accueil")
   }
 
-  const handleLogout = () => {
-    logout()
-    setIsConnected(false)
-    setUserId(null)
-    setPage("accueil")
-  }
+  // 🛡️ Vérification de la session (au chargement et périodiquement)
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const token = localStorage.getItem("token")
+      
+      if (!token) {
+        if (isConnected) setIsConnected(false)
+        setIsLoading(false)
+        return
+      }
 
-  return (
-    <>
-      <Header onNavigate={setPage} isConnected={isConnected} onLogout={handleLogout} />
+      try {
+        // On vérifie si le token est toujours valide auprès du serveur
+        const user = await getCurrentUser()
+        setIsConnected(true)
+        setUserId(user.user_id)
+      } catch (error) {
+        // Si le token est expiré ou invalide (Erreur 401)
+        handleLogout()
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-      {page === "accueil" && <Accueil isConnected={isConnected} userId={userId} />}
+    verifyAuth()
 
-      {page === "detail_compte" && (
-        isConnected ? <DetailCompte /> : setPage("login")
-      )}
+    // Vérifie la validité toutes les 30 secondes pour rediriger automatiquement si expiration
+    const interval = setInterval(verifyAuth, 30000)
+    return () => clearInterval(interval)
+  }, [isConnected])
 
-      {page === "page_installation" && <PageInstallation />}
+  // 📝 Gestionnaire de rendu pour inclure la redirection forcée
+  const renderContent = () => {
+    if (isLoading) return <div className="loading">Vérification de la session...</div>
 
-      {page === "login" && (
+    // Protection : Si l'utilisateur tente d'accéder à "detail_compte" sans session
+    if (page === "detail_compte" && !isConnected) {
+      return (
         <Login
           onLogin={handleLoginSuccess}
           onRegister={() => setPage("register")}
         />
-      )}
+      )
+    }
 
-      {page === "register" && (
-        <Register
-          onNavigate={setPage}
-        />
-      )}
+    switch (page) {
+      case "accueil":
+        return <Accueil isConnected={isConnected} userId={userId} />
+      
+      case "detail_compte":
+        return <DetailCompte />
 
-      {page === "CGU" && <CGU />}
+      case "page_installation":
+        return <PageInstallation />
 
-      {/* {page === "contact" && <Contact />} */}
+      case "login":
+        return (
+          <Login
+            onLogin={handleLoginSuccess}
+            onRegister={() => setPage("register")}
+          />
+        )
 
-      {page === "mentions_legales" && <MentionsLegales />}
+      case "register":
+        return <Register onNavigate={setPage} />
+
+      case "CGU":
+        return <CGU />
+
+      case "mentions_legales":
+        return <MentionsLegales />
+
+      default:
+        return <Accueil isConnected={isConnected} userId={userId} />
+    }
+  }
+
+  return (
+    <>
+      <Header 
+        onNavigate={setPage} 
+        isConnected={isConnected} 
+        onLogout={handleLogout} 
+      />
+
+      <main>
+        {renderContent()}
+      </main>
 
       <Footer onNavigate={setPage} />
     </>
