@@ -29,7 +29,7 @@ function CartePlaylist({
           isFavorite={isFavorite}
           isConnected={isConnected}
           toggleFavorite={toggleFavorite}
-          
+
         />
       </div>
 

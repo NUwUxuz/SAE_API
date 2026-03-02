@@ -180,6 +180,8 @@ class Playlist(Base):
     playlist_name: Mapped[Optional[str]] = mapped_column(String(100))
     playlist_listens: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"))
+    
+    tracks = relationship("Track", secondary="sae.playlist_track", backref="playlists")
 
 class ListeningHistory(Base):
     __tablename__ = 'listening_history'
@@ -338,7 +340,7 @@ class ViewUser(Base):
 
 class ViewTrackMaterialise(Base):
     __tablename__ = 'view_track_materialise'
-    __table_args__ = {'info': {'is_view': True, 'materialized': True}}
+    __table_args__ = {'info': {'is_view': True}}
 
     track_id: Mapped[int] = mapped_column(primary_key=True)
     track_title: Mapped[Optional[str]] = mapped_column(String(255))
@@ -350,7 +352,7 @@ class ViewTrackMaterialise(Base):
     track_composer: Mapped[Optional[str]] = mapped_column(String(100))
     track_lyricist: Mapped[Optional[str]] = mapped_column(String(100))
     track_publisher: Mapped[Optional[str]] = mapped_column(String(100))
-    # license_id: Mapped[Optional[int]] = mapped_column(Integer)
+    
     album_id: Mapped[Optional[int]] = mapped_column(Integer)
     album_title: Mapped[Optional[str]] = mapped_column(String(255))
     album_handle: Mapped[Optional[str]] = mapped_column(String(255))
@@ -360,14 +362,16 @@ class ViewTrackMaterialise(Base):
     album_date_released: Mapped[Optional[Date]] = mapped_column(Date)
     album_engineer: Mapped[Optional[str]] = mapped_column(String(255))
     album_producer: Mapped[Optional[str]] = mapped_column(String(255))
+    
     artist_id: Mapped[Optional[int]] = mapped_column(Integer)
     artist_name: Mapped[Optional[str]] = mapped_column(String(50))
-    # tags_list: Mapped[Optional[str]] = mapped_column(Text)
-    # genres_list: Mapped[Optional[str]] = mapped_column(Text)
-    # danceability: Mapped[Optional[float]] = mapped_column(Float)
-    # energy: Mapped[Optional[float]] = mapped_column(Float)
-    # tempo: Mapped[Optional[float]] = mapped_column(Float)
-    # languages_list: Mapped[Optional[str]] = mapped_column(Text)
+
+    track_genre_maj: Mapped[Optional[str]] = mapped_column(String(255))
+    
+    # Nouvelles colonnes agrégées
+    languages_list: Mapped[Optional[str]] = mapped_column(Text)
+    genres_list: Mapped[Optional[str]] = mapped_column(Text)
+    tags_list: Mapped[Optional[str]] = mapped_column(Text)
 
 class ViewFavoriteListens(Base):
     __tablename__ = 'view_favorite_listens'
