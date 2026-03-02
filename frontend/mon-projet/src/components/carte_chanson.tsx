@@ -10,12 +10,12 @@ type CarteChansonProps = {
   isConnected: boolean
   onAdd?: () => void
 }
+import GeneratedCover from "./GeneratedCover"
 
 function CarteChanson({
   trackId,
   title,
   artist,
-  pochette,
   isConnected,
   onAdd
 }: CarteChansonProps) {
@@ -55,11 +55,7 @@ function CarteChanson({
   return (
     <div className="carte-chanson">
       <div className="pochette-wrapper">
-        <img
-          src={pochette}
-          alt={`Pochette de ${title}`}
-          className="pochette"
-        />
+        <GeneratedCover title={title} />
 
         <div className="actions-overlay">
           <Coeur
