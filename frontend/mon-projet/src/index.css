@@ -116,7 +116,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
+  height: 5em;
   padding: 0 2rem;
   background-color: #111;
   color: white;
@@ -132,13 +132,15 @@ button:focus-visible {
 }
 
 /* Logo */
-.logo {
-  height: 3rem;           /* contrôle propre de la taille */
+.logo, .icon_user {
+  height: 3.3em;          /* contrôle propre de la taille */
   width: auto;            /* garde les proportions */
   display: block;         /* supprime espace inline */
   object-fit: contain;
 }
-
+.icon_user{
+  height: 3.3em; 
+}
 /* 
 .search-bar {
   margin: 24px 0;
@@ -263,17 +265,17 @@ button:focus-visible {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
-.carte-playlist>.description>h3 {
+.carte-playlist>.description>h3  {
 background-color: gold;
 color: #000;
 text-align: center;
 }
-.carte-chanson>.description {
+.carte-chanson>.description, .carte-album>.description,.carte-playlist>.description {
 	display: flex;
     justify-content: space-between;
 }
 
-.carte-chanson>.description>div {
+.carte-chanson>.description>div, .carte-album>.description>div, .carte-playlist>.description>div {
 	display: block
 
 }
@@ -534,6 +536,7 @@ text-align: center;
   display: flex;
   flex-direction: column;
   gap: 32px;
+  margin: 10em 0;
 }
 
 /* Titre */
@@ -555,6 +558,7 @@ text-align: center;
 }
 
 .login-form input {
+  margin: 0 1em;
   height: 60px;
   background: #d9d9d9;
   border-radius: 10px;

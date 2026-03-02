@@ -9,11 +9,11 @@ type CarteChansonProps = {
   pochette: string
   isConnected: boolean
 }
+import GeneratedCover from "./GeneratedCover"
 
 function CarteChanson({
   title,
   artist,
-  pochette,
   isConnected,
 }: CarteChansonProps) {
   const [isFavorite, setIsFavorite] = useState(false)
@@ -26,11 +26,7 @@ function CarteChanson({
   return (
     <div className="carte-chanson">
       <div className="pochette-wrapper">
-        <img
-          src={pochette}
-          alt={`Pochette de ${title}`}
-          className="pochette"
-        />
+        <GeneratedCover title={title} />
 
         <Coeur
           isFavorite={isFavorite}

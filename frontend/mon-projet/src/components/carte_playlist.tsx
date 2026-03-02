@@ -1,5 +1,6 @@
 import { useState } from "react"
 import Coeur from "./Coeur"
+import GeneratedCover from "./GeneratedCover"
 
 type CartePlaylistProps = {
   title: string
@@ -11,7 +12,6 @@ type CartePlaylistProps = {
 function CartePlaylist({
   title,
   creator,
-  pochette,
   isConnected,
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
@@ -23,11 +23,7 @@ function CartePlaylist({
   return (
     <div className="carte-playlist">
       <div className="pochette-wrapper">
-        <img
-          src={pochette}
-          alt={`Pochette de la playlist ${title}`}
-          className="pochette"
-        />
+        <GeneratedCover title={title} />
 
         <Coeur
           isFavorite={isFavorite}
@@ -37,10 +33,31 @@ function CartePlaylist({
         />
       </div>
 
-      <div className="description">
-        <h3>{title}</h3>
-        <p>{creator}</p>
-      </div>
+      <article className="description">
+        	<div>
+          	<h3>{title}</h3>
+        		<p>{creator}</p>
+        	</div>
+          <button
+            className="btn-plus"
+            onClick={() => console.log("Ajouter à la playlist")}
+            >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            >
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+            </svg>
+            </button>
+
+          </article>
     </div>
   )
 }
