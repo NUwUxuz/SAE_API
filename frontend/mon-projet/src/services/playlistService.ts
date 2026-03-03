@@ -21,7 +21,7 @@ export async function getUserPlaylists(userId: number): Promise<Playlist[]> {
     return response.json()
 }
 
-export async function createPlaylist(userId: number, title: string): Promise<Playlist> {
+export async function createPlaylist(title: string): Promise<Playlist> {
     const token = localStorage.getItem("token")
     if (!token) throw new Error("Utilisateur non connecté")
 
