@@ -3,33 +3,35 @@ import Coeur from "./Coeur"
 import GeneratedCover from "./GeneratedCover"
 
 type CartePlaylistProps = {
+  id?: number
   title: string
   creator: string
   pochette: string
   isConnected: boolean
+  onClick?: () => void
 }
 
 function CartePlaylist({
   title,
   creator,
   isConnected,
+  onClick
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
-  const toggleFavorite = () => {
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation() 
     setIsFavorite((prev) => !prev)
   }
 
   return (
-    <div className="carte-playlist">
+    <div className="carte-playlist" onClick={onClick}> {}
       <div className="pochette-wrapper">
         <GeneratedCover title={title} />
-
         <Coeur
           isFavorite={isFavorite}
           isConnected={isConnected}
           toggleFavorite={toggleFavorite}
-
         />
       </div>
 
@@ -38,9 +40,8 @@ function CartePlaylist({
           	<h3>{title}</h3>
         		<p>{creator}</p>
         	</div>
-          <button
-            className="btn-plus"
-            onClick={() => console.log("Ajouter à la playlist")}
+          <button className="btn-plus" onClick={(e) => 
+            { e.stopPropagation(); console.log("Ajouter à la playlist") }}
             >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
