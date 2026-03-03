@@ -3,13 +3,15 @@ import Coeur from "./Coeur"
 import GeneratedCover from "./GeneratedCover"
 
 type CarteAlbumProps = {
-  title: string
-  artist: string
-  pochette?: string
-  isConnected: boolean
+    title: string
+    artist: string
+    pochette?: string
+    isConnected: boolean
+    onAdd?: () => void
+
 }
 
-function CarteAlbum({ title, artist, isConnected }: CarteAlbumProps) {
+function CarteAlbum({ title, artist, isConnected,onAdd }: CarteAlbumProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
   const toggleFavorite = () => {
@@ -35,7 +37,7 @@ function CarteAlbum({ title, artist, isConnected }: CarteAlbumProps) {
           <h3>{title}</h3>
           <p>{artist}</p>
         </div>
-
+        {isConnected && onAdd && (
         <button
           className="btn-plus"
           onClick={() => console.log("Ajouter à la playlist")}
@@ -54,6 +56,7 @@ function CarteAlbum({ title, artist, isConnected }: CarteAlbumProps) {
             <path d="M12 5v14" />
           </svg>
         </button>
+        )}
       </article>
     </div>
   )

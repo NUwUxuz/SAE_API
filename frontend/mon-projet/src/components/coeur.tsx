@@ -13,9 +13,9 @@ function Coeur({ isFavorite, isConnected, toggleFavorite }: CoeurProps) {
   return (
     <button
       type="button"
-      className={`coeur ${isFavorite ? "active" : "inactive"} ${
-        !isConnected ? "disabled" : ""
-      }`}
+      className={`button-discret coeur ${isFavorite ? "active" : "inactive"} ${
+    !isConnected ? "disabled" : ""
+  }`}
       onClick={handleClick}
       aria-label="Ajouter aux favoris"
       title={
