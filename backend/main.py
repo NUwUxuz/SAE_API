@@ -159,14 +159,51 @@ def get_all_albums(limit: Optional[int] = None, db: Session = Depends(get_db)):
     
     return query.all()
 
-@app.get("/album/{album_id}", response_model=List[schema.Album]) 
+@app.get("/album/{album_id}", response_model=schema.AlbumDetailed) 
 def get_one_album(album_id: int, db: Session = Depends(get_db)):
-    album = db.query(Album).filter(Album.album_id == album_id).first()
+    # On récupère les infos de l'album et le nom du premier artiste trouvé pour cet album
+    # Note: On utilise ArtistAlbumTrack pour le lien
+    from sqlalchemy import func
     
-    if album is None:
+    album = db.query(Album).filter(Album.album_id == album_id).first()
+    if not album:
         raise HTTPException(status_code=404, detail="Album non trouvé")
-        
-    return album
+
+    # On cherche l'artiste principal (le premier dans la table de liaison)
+    artist_data = db.query(Artist.artist_name).join(
+        ArtistAlbumTrack, Artist.artist_id == ArtistAlbumTrack.artist_id
+    ).filter(ArtistAlbumTrack.album_id == album_id).first()
+    
+    artist_name = artist_data[0] if artist_data else "Artiste inconnu"
+    
+    # On compte les pistes
+    track_count = db.query(func.count(ArtistAlbumTrack.track_id)).filter(
+        ArtistAlbumTrack.album_id == album_id
+    ).scalar()
+
+    return schema.AlbumDetailed(
+        album_id=album.album_id,
+        album_title=album.album_title,
+        album_handle=album.album_handle,
+        album_information=album.album_information,
+        album_date_released=album.album_date_released,
+        album_listens=album.album_listens,
+        album_favorites=album.album_favorites,
+        album_producer=album.album_producer,
+        album_image_file=album.album_image_file,
+        artist_name=artist_name,
+        track_count=track_count or 0
+    )
+
+@app.get("/album/{album_id}/tracks", response_model=List[schema.TrackView])
+def get_album_tracks(album_id: int, db: Session = Depends(get_db)):
+    # On utilise la vue matérialisée car elle contient déjà album_id
+    tracks = db.query(ViewTrackMaterialise).filter(
+        ViewTrackMaterialise.album_id == album_id
+    ).all()
+    
+    return tracks
+
 
 @app.get("/track", response_model=List[schema.Track]) 
 def get_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):
@@ -188,6 +225,27 @@ def get_user_playlists(user_id: int, db: Session = Depends(get_db), current_user
     
     playlists = db.query(Playlist).filter(Playlist.user_id == user_id).all()
     return playlists
+
+@app.get("/playlist/{playlist_id}", response_model=schema.PlaylistDetailed)
+def get_one_playlist(playlist_id: int, db: Session = Depends(get_db)):
+    # Récupère la playlist et le pseudo du créateur via join
+    result = db.query(Playlist, User.pseudo.label("creator_pseudo")).join(
+        User, Playlist.user_id == User.user_id
+    ).filter(Playlist.playlist_id == playlist_id).first()
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Playlist non trouvée")
+    
+    playlist, creator_pseudo = result
+    
+    return schema.PlaylistDetailed(
+        playlist_id=playlist.playlist_id,
+        playlist_name=playlist.playlist_name,
+        playlist_listens=playlist.playlist_listens,
+        user_id=playlist.user_id,
+        creator_pseudo=creator_pseudo
+    )
+
 
 @app.get("/playlist/{playlist_id}/tracks", response_model=List[schema.TrackView])
 def get_playlist_tracks(playlist_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

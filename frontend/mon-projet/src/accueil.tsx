@@ -13,7 +13,9 @@ type AccueilProps = {
   isConnected: boolean
   userId: number | null
   onOpenPlaylist: (id: number) => void
+  onOpenAlbum: (id: number) => void
 }
+
 
 interface Track {
   track_id: number;
@@ -29,7 +31,8 @@ interface PlaylistDB {
   user_id: number;
 }
 
-export default function Accueil({ isConnected = false, userId, onOpenPlaylist }: AccueilProps) {
+export default function Accueil({ isConnected = false, userId, onOpenPlaylist, onOpenAlbum }: AccueilProps) {
+
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [recoGRU, setRecoGRU] = useState<Track[]>([]);
@@ -289,7 +292,9 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist }:
                 artist={album.artist}
                 pochette={album.pochette}
                 isConnected={isConnected}
+                onClick={() => onOpenAlbum(index)} // Note: assuming index is ID or we need real IDs
               />
+
             ))}
           </Carousel>
         </main>

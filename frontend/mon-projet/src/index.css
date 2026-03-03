@@ -97,8 +97,9 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
 .button-discret:focus,
-.button-discret:focus-visible{
+.button-discret:focus-visible {
   outline: none;
 }
 
@@ -823,6 +824,7 @@ button:focus-visible {
   flex-direction: column;
   gap: 0.5rem;
   color: var(--color-text);
+  flex: 1;
 }
 
 .playlist-type {
@@ -836,8 +838,19 @@ button:focus-visible {
   font-size: 4.5rem;
   font-weight: 900;
   line-height: 1;
-  margin: 0.5rem 0;
+  margin: 0.2rem 0;
   letter-spacing: -0.04em;
+  background: none;
+  border: none;
+  color: inherit;
+  width: 100%;
+  padding: 0;
+  cursor: pointer;
+}
+
+.playlist-title-huge:focus {
+  outline: none;
+  border-bottom: 2px solid var(--color-primary);
 }
 
 .playlist-meta-info {
@@ -858,7 +871,7 @@ button:focus-visible {
   padding: 1.5rem 2rem;
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .btn-play-large {
@@ -888,11 +901,18 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
+  transition: all 0.2s;
+  padding: 8px;
+  border-radius: 50%;
 }
 
 .btn-icon-secondary:hover {
   color: var(--color-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-icon-secondary.active {
+  color: var(--color-primary);
 }
 
 .tracklist-container {
@@ -926,6 +946,13 @@ button:focus-visible {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.col-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Espacement entre titre et artiste */
+}
+
 .track-name {
   font-weight: 600;
   font-size: 0.95rem;
@@ -942,6 +969,7 @@ button:focus-visible {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
+
 
 
 .create-section {

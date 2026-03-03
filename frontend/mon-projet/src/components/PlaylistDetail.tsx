@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
-import Coeur from "./Coeur"
+import Coeur from "./coeur"
+
 import GeneratedCover from "./GeneratedCover"
 
 // --- TYPES BASÉS SUR TON SCHÉMA SQLALCHEMY ---
@@ -124,17 +125,25 @@ export default function PlaylistDetail({ playlistId, isConnected }: PlaylistDeta
     const [tracks, setTracks] = useState<TrackData[]>([])
     const [loading, setLoading] = useState(true)
 
+    const [isEditing, setIsEditing] = useState(false)
+    const [editName, setEditName] = useState("")
+
     useEffect(() => {
         async function loadData() {
             try {
                 const token = localStorage.getItem("token")
                 const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
-                const resP = await fetch(`http://127.0.0.1:8000/playlists/${playlistId}`, { headers })
-                if (resP.ok) setPlaylist(await resP.json())
+                const resP = await fetch(`http://127.0.0.1:8000/playlist/${playlistId}`, { headers })
+                if (resP.ok) {
+                    const data = await resP.json()
+                    setPlaylist(data)
+                    setEditName(data.playlist_name)
+                }
 
-                const resT = await fetch(`http://127.0.0.1:8000/playlists/${playlistId}/tracks`, { headers })
+                const resT = await fetch(`http://127.0.0.1:8000/playlist/${playlistId}/tracks`, { headers })
                 if (resT.ok) setTracks(await resT.json())
+
             } catch (err) {
                 console.error(err)
             } finally {
@@ -143,6 +152,29 @@ export default function PlaylistDetail({ playlistId, isConnected }: PlaylistDeta
         }
         loadData()
     }, [playlistId])
+
+    const handleUpdatePlaylist = async () => {
+        const token = localStorage.getItem("token")
+        if (!token) return
+
+        try {
+            const res = await fetch(`http://127.0.0.1:8000/playlist/${playlistId}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ playlist_name: editName })
+            })
+
+            if (res.ok) {
+                setPlaylist(prev => prev ? { ...prev, playlist_name: editName } : null)
+                setIsEditing(false)
+            }
+        } catch (e) {
+            console.error("Erreur update playlist:", e)
+        }
+    }
 
     if (loading) return <div className="playlist-detail-container">Chargement...</div>
 
@@ -154,7 +186,21 @@ export default function PlaylistDetail({ playlistId, isConnected }: PlaylistDeta
                 </div>
                 <div className="playlist-info">
                     <span className="playlist-type">PLAYLIST</span>
-                    <h1 className="playlist-title-huge">{playlist?.playlist_name}</h1>
+                    {isEditing ? (
+                        <input
+                            type="text"
+                            className="playlist-title-huge"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onBlur={handleUpdatePlaylist}
+                            onKeyDown={(e) => e.key === "Enter" && handleUpdatePlaylist()}
+                            autoFocus
+                        />
+                    ) : (
+                        <h1 className="playlist-title-huge" onClick={() => isConnected && setIsEditing(true)}>
+                            {playlist?.playlist_name}
+                        </h1>
+                    )}
                     <div className="playlist-meta-info">
                         <span className="creator-bold">{playlist?.creator_pseudo || "Utilisateur"}</span>
                         <span className="bullet">•</span>
@@ -177,6 +223,19 @@ export default function PlaylistDetail({ playlistId, isConnected }: PlaylistDeta
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                     </svg>
                 </button>
+
+                {isConnected && (
+                    <button
+                        className={`btn-icon-secondary ${isEditing ? 'active' : ''}`}
+                        title="Modifier le titre"
+                        onClick={() => setIsEditing(!isEditing)}
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="28" height="28">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                )}
 
                 <button className="btn-icon-secondary" title="Plus d'options">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
