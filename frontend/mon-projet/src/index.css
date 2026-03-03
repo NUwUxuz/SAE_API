@@ -1,21 +1,9 @@
-/* 
-:root {
-  line-height: 1.5;
-  font-weight: 400;
 
-  color-scheme: light dark;
-  color: #111;
-  background-color: #ffffff;
-
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-} */
 :root {
 
   /* Couleurs principales */
   --color-primary: #F59E0B;
-  --color-primary-light: rgba(245, 158, 11, 0.2);
+  --color-primary-light: #F5B027;
   --color-danger: #EF4444;
 
   /* Neutres */
@@ -551,40 +539,32 @@ text-align: center;
   background: #f0f0f0;
   border: 1px solid #000;
   border-radius: 10px;
-  font-family: "Inter", sans-serif;
 
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  margin: 10em 0;
+  margin: 2em 0;
 }
 
-/* Titre */
-.login-title {
-  font-size: 64px;
-  text-align: center;
-}
+
 
 /* Champs */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1em;
 }
 
-.login-form label {
-  font-size: 24px;
-  color: rgba(0, 0, 0, 0.7);
-}
+
 
 .login-form input {
   margin: 0 1em;
-  height: 60px;
   background: #d9d9d9;
   border-radius: 10px;
   border: none;
   padding: 0 16px;
-  font-size: 20px;
+}
+.login-form .champ{
+  height: 2em;
 }
 
 /* Boutons */
@@ -593,6 +573,22 @@ text-align: center;
   justify-content: space-between;
   gap: 24px;
 }
+.tag-container{ 
+  display: "flex";
+  gap: "12px"; 
+  flex-wrap: "wrap" }
+
+.tag-selected{
+  background: var(--color-primary-light);
+  margin: 1em;
+  color: var(--color-bg);
+  
+}
+.tag-not-selected{
+  background: var(--color-text-muted);
+  margin: 1em;
+}
+
 
 .btn {
   flex: 1;
@@ -604,12 +600,15 @@ text-align: center;
 }
 
 .confirm {
-  background: #19d21f;
+  background: var(--color-primary);
+  margin: 1em;
+
 }
 
 .cancel {
   background: #666;
   color: white;
+  margin: 1em;
 }
 
 /* Contact */
@@ -837,4 +836,8 @@ text-align: center;
 .btn-cancel-small {
   background: transparent;
   color: var(--color-text-muted);
+}
+
+.CGU, .mentions-legales{
+  margin: 5%;
 }

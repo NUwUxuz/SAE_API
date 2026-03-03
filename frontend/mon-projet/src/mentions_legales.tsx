@@ -1,6 +1,6 @@
 function MentionsLegales() {
     return (
-        <>
+        <section className="mentions-legales">
             <h1 className='centrer'>Mentions légales</h1>
 
             <p className='centrer'>En vigueur au 09/02/2026</p>
@@ -68,7 +68,7 @@ function MentionsLegales() {
                 judiciaires telles que prévues par la règlementation en vigueur.
             </p>
 
-        </>
+        </section>
     )
 }
 
