@@ -67,6 +67,7 @@ export default function Register({ onNavigate }: RegisterProps) {
                     <div className="login-form">
                         <label>Pseudo (Nom affiché)</label>
                         <input
+                            className="champ"
                             type="text"
                             placeholder="Ex: orchestra"
                             value={name}
@@ -74,6 +75,7 @@ export default function Register({ onNavigate }: RegisterProps) {
                         />
                         <label>Identifiant de connexion (Unique)</label>
                         <input
+                            className="champ"
                             type="text"
                             placeholder="Ex: orchest_ra"
                             value={loginIdentifier}
@@ -81,6 +83,7 @@ export default function Register({ onNavigate }: RegisterProps) {
                         />
                         <label>Email</label>
                         <input
+                            className="champ"
                             type="email"
                             placeholder="Ton email"
                             value={email}
@@ -88,6 +91,7 @@ export default function Register({ onNavigate }: RegisterProps) {
                         />
                         <label>Mot de passe</label>
                         <input
+                            className="champ"
                             type="password"
                             placeholder="Ton mot de passe"
                             value={password}
@@ -100,11 +104,11 @@ export default function Register({ onNavigate }: RegisterProps) {
                 {step === 2 && (
                     <div className="login-form">
                         <label>Quels genres de musique aimes-tu ?</label>
-                        <div className="tags-container" style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                        <div className="tags-container" >
                             {musicTags.map((tag) => (
                                 <button
                                     key={tag}
-                                    className={`btn ${selectedTags.includes(tag) ? "confirm" : "cancel"}`}
+                                    className={`btn ${selectedTags.includes(tag) ? "tag-selected" : "tag-not-selected"}`}
                                     onClick={() => toggleTag(tag)}
                                     type="button"
                                 >
