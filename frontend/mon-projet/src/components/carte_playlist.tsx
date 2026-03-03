@@ -7,12 +7,14 @@ type CartePlaylistProps = {
   creator: string
   pochette: string
   isConnected: boolean
+  onAdd?: () => void
 }
 
 function CartePlaylist({
   title,
   creator,
   isConnected,
+  onAdd
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
@@ -38,6 +40,7 @@ function CartePlaylist({
           	<h3>{title}</h3>
         		<p>{creator}</p>
         	</div>
+          {isConnected && onAdd && (
           <button
             className="btn-plus"
             onClick={() => console.log("Ajouter à la playlist")}
@@ -56,7 +59,7 @@ function CartePlaylist({
                 <path d="M12 5v14" />
             </svg>
             </button>
-
+          )}
           </article>
     </div>
   )
