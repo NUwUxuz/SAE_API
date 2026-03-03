@@ -9,23 +9,25 @@ type CartePlaylistProps = {
   pochette: string
   isConnected: boolean
   onAdd?: () => void
+  onClick?: () => void
 }
 
 function CartePlaylist({
   title,
   creator,
   isConnected,
+  onAdd,
   onClick
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
   const toggleFavorite = (e: React.MouseEvent) => {
-    e.stopPropagation() 
+    e.stopPropagation()
     setIsFavorite((prev) => !prev)
   }
 
   return (
-    <div className="carte-playlist" onClick={onClick}> {}
+    <div className="carte-playlist" onClick={onClick}>
       <div className="pochette-wrapper">
         <GeneratedCover title={title} />
         <Coeur
@@ -36,35 +38,37 @@ function CartePlaylist({
       </div>
 
       <article className="description">
-        	<div>
-          	<h3>{title}</h3>
-        		<p>{creator}</p>
-        	</div>
-          {isConnected && onAdd && (
+        <div>
+          <h3>{title}</h3>
+          <p>{creator}</p>
+        </div>
+        {isConnected && onAdd && (
           <button
             className="btn-plus"
-            onClick={() => console.log("Ajouter à la playlist")}
-          <button className="btn-plus" onClick={(e) => 
-            { e.stopPropagation(); console.log("Ajouter à la playlist") }}
-            >
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd();
+            }}
+          >
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="30"
-                height="30"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              xmlns="http://www.w3.org/2000/svg"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
             </svg>
-            </button>
-          )}
-          </article>
+          </button>
+        )}
+      </article>
     </div>
   )
 }
+
 
 export default CartePlaylist
