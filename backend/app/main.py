@@ -12,9 +12,9 @@ from models import (
     PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise
 )
 
-import schema
+import backend.app.schema as schema
 
-from schema import (    
+from backend.app.schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
     PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
     PlaylistTrackCreate, UserTrackListeningCreate, SearchHistoryCreate, TrackView,
@@ -53,10 +53,10 @@ app = FastAPI()
 # Configuration BDD
 db_host = os.getenv("DB_HOST", "localhost")
 DB_CONFIG = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "uJ7A\postgres",
-    "host": "localhost",
+    "dbname": "mabase",
+    "user": "user",
+    "password": "password",
+    "host": "db",
     "port": "5432"
 }
 

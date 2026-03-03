@@ -117,7 +117,6 @@ export async function register(userData: RegisterData) {
 export function logout() {
     localStorage.removeItem("token")
     localStorage.removeItem("user_id")
-    // On peut aussi vider d'autres données sensibles ici si nécessaire
 }
 
 /**
