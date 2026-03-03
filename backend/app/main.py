@@ -12,9 +12,9 @@ from models import (
     PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise
 )
 
-import schema
+import backend.app.schema as schema
 
-from schema import (    
+from backend.app.schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
     PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
     PlaylistTrackCreate, UserTrackListeningCreate, SearchHistoryCreate, TrackView,
@@ -53,10 +53,10 @@ app = FastAPI()
 # Configuration BDD
 db_host = os.getenv("DB_HOST", "localhost")
 DB_CONFIG = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "admin",
-    "host": "localhost",
+    "dbname": "mabase",
+    "user": "user",
+    "password": "password",
+    "host": "db",
     "port": "5432"
 }
 
@@ -99,13 +99,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_login: str = payload.get("sub")
-        if user_login is None:
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
         
-    user = db.query(User).filter(User.user_login == user_login).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
     if user is None:
         raise credentials_exception
     return user
@@ -125,7 +125,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=401, detail="Login ou mot de passe incorrect")
 
     # Générer le token
-    access_token = create_access_token(data={"sub": user.user_login})
+    access_token = create_access_token(data={"sub": str(user.user_id)})
     
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -273,7 +273,8 @@ def get_playlist_tracks(playlist_id: int, db: Session = Depends(get_db), current
 
 @app.get("/user")
 def get_current_user_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return current_user
+    user = db.query(User).filter(User.user_id == current_user.user_id).first()
+    return user
 
 @app.get("/viewTrack", response_model=List[schema.TrackView]) 
 def get_view_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):

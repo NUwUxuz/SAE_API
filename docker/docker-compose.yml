@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mabase
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../bdd/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d mabase" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  populate-script:
+    build: ../bdd/app
+    depends_on:
+      db:
+        condition: service_healthy  
+    volumes:
+      - ../bdd/app/main.py:/app/main.py
+      - ../bdd/app/cleaning.py:/app/cleaning.py
+      - ../bdd/app/fonction.py:/app/fonction.py
+      - ../bdd/app/map.py:/app/map.py
+      - ../bdd/data:/app/data
+      - ../bdd/init.sql:/app/init.sql
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://user:password@db:5432/mabase
+
+  backend:
+    build: ../backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/mabase
+    depends_on:
+      db:
+        condition: service_healthy
+      populate-script:
+        condition: service_completed_successfully # 👈 La condition magique !
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ../frontend/mon-projet
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_started
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

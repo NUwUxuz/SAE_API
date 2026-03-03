@@ -1,6 +1,6 @@
 function CGU() {
     return (
-        <>
+        <section className="CGU">
             <h1 className='centrer'>Conditions générales d'utilisation</h1>
 
             <p className='centrer'>En vigueur au 09/02/2026</p>
@@ -167,7 +167,7 @@ function CGU() {
                 coordonnées inscrites à l’ARTICLE 1.
             </p>
 
-        </>
+        </section>
     )
 }
 
