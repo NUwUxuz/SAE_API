@@ -13,7 +13,7 @@ function Header({ onNavigate, isConnected, onLogout }: HeaderProps) {
 
   return (
     <header className="header">
-      <button onClick={() => onNavigate("accueil")}>
+      <button className="button-discret" onClick={() => onNavigate("accueil")}>
         <img src={Logo} className="logo" alt="site logo" />
       </button>
       {/* 🔍 BARRE DE RECHERCHE */}
@@ -21,8 +21,7 @@ function Header({ onNavigate, isConnected, onLogout }: HeaderProps) {
         <input
           type="text"
           placeholder="Rechercher une musique, un artiste, une playlist..."
-        // value={search}
-        // onChange={(e) => setSearch(e.target.value)}
+
         />
       </div>
       <button

@@ -19,7 +19,7 @@ export default function Carousel({ children }: CarouselProps) {
   return (
     <div className="carousel-wrapper">
       <button className="carousel-btn left" onClick={scrollLeft}>
-        ‹
+        ‹ 
       </button>
 
       <div className="carousel-container" ref={containerRef}>
