@@ -9,17 +9,19 @@ import bcrypt
 from models import ( 
     Album, User, Playlist, Track, Artist, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise
+    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise, ArtistAlbumTrack
 )
 
-import backend.app.schema as schema
+import schema
 
-from backend.app.schema import (    
-    UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
-    PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
+# 2. On importe les classes spécifiques pour tes fonctions de création
+from schema import (    
+    UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, 
+    UserPlaylistListeningCreate, PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, 
+    UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
     PlaylistTrackCreate, UserTrackListeningCreate, SearchHistoryCreate, TrackView,
-
-    UserUpdate, PlaylistUpdate, UserTrackListeningUpdate, UserAlbumListeningUpdate, UserPlaylistListeningUpdate
+    UserUpdate, PlaylistUpdate, UserTrackListeningUpdate, UserAlbumListeningUpdate, 
+    UserPlaylistListeningUpdate
 )
 
 import uvicorn

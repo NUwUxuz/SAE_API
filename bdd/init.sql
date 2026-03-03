@@ -823,7 +823,7 @@ FROM sae.User;
 
 DROP MATERIALIZED VIEW IF EXISTS sae.View_Track_Materialise CASCADE;
 
-CREATE MATERIALIZED VIEW sae.View_Track_Materialise AS
+CREATE MATERIALIZED VIEW sae.view_track_materialise AS
 SELECT
     t.track_id,
     t.track_title,
@@ -844,6 +844,7 @@ SELECT
     alb.album_date_released,
     alb.album_engineer,
     alb.album_producer,
+    alb.album_image_file,
     a.artist_id,
     a.artist_name,
     STRING_AGG(DISTINCT tag.tag_name, ', ') AS tags_list,
@@ -867,9 +868,20 @@ FROM
 GROUP BY
     t.track_id,
     alb.album_id,
+    alb.album_title,
+    alb.album_handle,
+    alb.album_information,
+    alb.album_date_created,
+    alb.album_date_released,
+    alb.album_engineer,
+    alb.album_producer,
+    alb.album_image_file,
     a.artist_id,
+    a.artist_name,
     s.track_id,
-    s.danceability, s.energy, s.tempo;
+    s.danceability, 
+    s.energy, 
+    s.tempo;
 
 CREATE UNIQUE INDEX idx_view_track_mat_id ON sae.View_Track_Materialise (track_id);
 
