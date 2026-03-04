@@ -7,9 +7,9 @@ from sqlalchemy import create_engine
 import bcrypt
 
 from models import ( 
-    Album, User, Playlist, Track, Artist, ListeningHistory, UserAlbumListening, UserPlaylistListening,
+    Album, User, Playlist, Track, Artist, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise, ArtistAlbumTrack
+    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise, ArtistAlbumTrack, ListeningHistory
 )
 
 import schema

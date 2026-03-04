@@ -23,16 +23,16 @@ def preparer_table_users(df_source):
 
     # Génération des champs textes basiques
     users["email"] = [f"user{i}@anon.com" for i in range(n)]
-    users["login"] = [f"user_{i:04d}" for i in range(n)]
-    users["mdp"] = [ _random_hash(f"pass_{i}") for i in range(n) ]
+    users["user_login"] = [f"user_{i:04d}" for i in range(n)]
+    users["user_mdp"] = [ _random_hash(f"pass_{i}") for i in range(n) ]
     users["pseudo"] = [f"User_{i}" for i in range(n)]
     users["image"] = [f"image_{i}.png" for i in range(n)]
 
     col_sexe = "Quel est votre sexe ?"
     if col_sexe in df.columns:
-        users["gender"] = df[col_sexe].apply(_encode_gender)
+        users["user_gender"] = df[col_sexe].apply(_encode_gender)
     else:
-        users["gender"] = "O"
+        users["user_gender"] = "O"
 
     col_age = "Quel est votre âge ?"
     if col_age in df.columns:

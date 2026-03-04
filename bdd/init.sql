@@ -18,21 +18,21 @@ create table sae.Album_type (
 
 create table sae.License (
     license_id serial primary key,
-    license_name varchar(255)
+    license_name varchar(150)
 );
 
 create table sae.Tag (
     tag_id serial primary key,
-    tag_name varchar(255)
+    tag_name varchar(100)
 );
 
 create table sae.Genre (
     genre_id serial primary key,
     genre_parent_id int,
-    genre_title varchar(255),
-    genre_handle varchar(255),
+    genre_title varchar(50),
+    genre_handle varchar(50),
     genre_nb_tracks int,
-    FOREIGN KEY (genre_parent_id) REFERENCES sae.Genre (genre_id) ON DELETE SET NULL 
+    FOREIGN KEY (genre_parent_id) REFERENCES sae.Genre (genre_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_genre_parent ON sae.Genre(genre_parent_id);
 
@@ -58,15 +58,15 @@ create table sae.Mood (
 
 create table sae.Artist (
     artist_id BIGINT primary key,
-    artist_handle varchar(50),
-    artist_name varchar(50),
-    artist_bio TEXT,
-    artist_location varchar(255),
+    artist_handle varchar(150),
+    artist_name varchar(150),
+    artist_bio varchar(40000),
+    artist_location varchar(500),
     artist_latitude float,
     artist_longitude float,
-    artist_members varchar(255),
+    artist_members varchar(7000),
     artist_associated_labels varchar(255),
-    artist_related_projects varchar(255),
+    artist_related_projects varchar(1500),
     artist_active_year_begin int,
     artist_year_end int,
     artist_contact varchar(255),
@@ -79,9 +79,9 @@ CREATE INDEX idx_artist_name ON sae.Artist(artist_name);
 
 create table sae.Album (
     album_id BIGINT primary key,
-    album_handle varchar(255),
-    album_title varchar(255),
-    album_information TEXT,
+    album_handle varchar(150),
+    album_title varchar(150),
+    album_information varchar(50000),
     album_date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     album_date_released date,
     album_listens int DEFAULT(0),
@@ -107,18 +107,18 @@ create table sae.Track (
     track_comments int DEFAULT(0),
     track_date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     track_date_recorded date,
-    track_composer varchar(100),
-    track_lyricist varchar(100),
-    track_publisher varchar(100),
-    preview varchar(500),
+    track_composer varchar(255),
+    track_lyricist varchar(255),
+    track_publisher varchar(255),
     license_id int,
+    preview VARCHAR(512),
     FOREIGN KEY (license_id) REFERENCES sae.License (license_id) ON DELETE SET NULL
 );
 CREATE INDEX idx_track_license ON sae.Track(license_id);
 CREATE INDEX idx_track_title ON sae.Track(track_title);
 
 create table sae.Stats_echonest (
-    track_id bigint primary key,
+    track_id BIGINT primary key,
     acousticness float,
     danceability float,
     energy float,
@@ -144,9 +144,9 @@ create table sae.User (
     email varchar(100) NOT NULL UNIQUE,
     image varchar(255),
     pseudo varchar(50),
-    login varchar(50) NOT NULL UNIQUE,
-    mdp varchar(64) NOT NULL,
-    gender char,
+    user_login varchar(50) NOT NULL UNIQUE,
+    user_mdp varchar(64) NOT NULL,
+    user_gender char,
     birth_year date,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     situation_name varchar(50),
@@ -180,7 +180,7 @@ create table sae.Stats_user (
 );
 
 create table sae.Playlist (
-    playlist_id BIGINT primary key,
+    playlist_id serial primary key,
     playlist_name varchar(100),
     playlist_listens int default 0,
     user_id int,
@@ -194,21 +194,21 @@ CREATE INDEX idx_playlist_user ON sae.Playlist(user_id);
 * =================================================================================
 */
 
-    create table sae.Artist_Album_Track (
-        artist_id BIGINT,
-        album_id BIGINT,
-        track_id BIGINT,
-        FOREIGN KEY (artist_id) REFERENCES sae.Artist (artist_id) ON DELETE CASCADE,
-        FOREIGN KEY (album_id) REFERENCES sae.Album (album_id) ON DELETE CASCADE,
-        FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
-        primary key (artist_id, album_id, track_id)
-    );
+create table sae.Artist_Album_Track (
+    artist_id BIGINT,
+    album_id BIGINT,
+    track_id BIGINT,
+    FOREIGN KEY (artist_id) REFERENCES sae.Artist (artist_id) ON DELETE CASCADE,
+    FOREIGN KEY (album_id) REFERENCES sae.Album (album_id) ON DELETE CASCADE,
+    FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
+    primary key (artist_id, album_id, track_id)
+);
 CREATE INDEX idx_aat_album ON sae.Artist_Album_Track(album_id);
 CREATE INDEX idx_aat_track ON sae.Artist_Album_Track(track_id);
 
 create table sae.Playlist_User_Favorite (
     user_id INT,
-    playlist_id bigint,
+    playlist_id INT,
     added_at date DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (playlist_id) REFERENCES sae.Playlist (playlist_id) ON DELETE CASCADE,
@@ -218,7 +218,7 @@ CREATE INDEX idx_puf_playlist ON sae.Playlist_User_Favorite(playlist_id);
 
 create table sae.Playlist_User (
     user_id INT,
-    playlist_id bigint,
+    playlist_id INT,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (playlist_id) REFERENCES sae.Playlist (playlist_id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, playlist_id)
@@ -226,8 +226,8 @@ create table sae.Playlist_User (
 CREATE INDEX idx_pu_playlist ON sae.Playlist_User(playlist_id);
 
 create table sae.Playlist_Track (
-    playlist_id bigint,
-    track_id bigint,
+    playlist_id int,
+    track_id BIGINT,
     PRIMARY KEY (playlist_id, track_id),
     FOREIGN KEY (playlist_id) REFERENCES sae.Playlist (playlist_id) ON DELETE CASCADE,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE
@@ -274,7 +274,7 @@ CREATE INDEX idx_sp_period ON sae.Score_Period(period_id);
 
 create table sae.User_Track_Listening (
     user_id int,
-    track_id bigint,
+    track_id BIGINT,
     nb_listening int DEFAULT(1),
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
@@ -284,7 +284,7 @@ CREATE INDEX idx_utl_track ON sae.User_Track_Listening(track_id);
 
 create table sae.Track_User_Favorite (
     user_id int,
-    track_id bigint,
+    track_id BIGINT,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
@@ -293,7 +293,7 @@ create table sae.Track_User_Favorite (
 CREATE INDEX idx_tuf_track ON sae.Track_User_Favorite(track_id);
 
 create table sae.Track_Genre (
-    track_id bigint,
+    track_id BIGINT,
     genre_id int,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
     FOREIGN KEY (genre_id) REFERENCES sae.Genre (genre_id) ON DELETE CASCADE,
@@ -302,7 +302,7 @@ create table sae.Track_Genre (
 CREATE INDEX idx_tg_genre ON sae.Track_Genre(genre_id);
 
 create table sae.Track_Genre_Majoritaire (
-    track_id bigint,
+    track_id BIGINT,
     genre_id int,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
     FOREIGN KEY (genre_id) REFERENCES sae.Genre (genre_id) ON DELETE CASCADE,
@@ -321,7 +321,7 @@ create table sae.Genre_top_User (
 CREATE INDEX idx_gtu_genre ON sae.Genre_top_User(genre_id);
 
 create table sae.Track_Language (
-    track_id bigint,
+    track_id BIGINT,
     language_id int,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
     FOREIGN KEY (language_id) REFERENCES sae.Language (language_id) ON DELETE CASCADE,
@@ -329,17 +329,8 @@ create table sae.Track_Language (
 );
 CREATE INDEX idx_tl_language ON sae.Track_Language(language_id);
 
-create table sae.User_Language (
-    user_id int,
-    language_id int,
-    FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
-    FOREIGN KEY (language_id) REFERENCES sae.Language (language_id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, language_id)
-);
-CREATE INDEX idx_ul_language ON sae.User_Language(language_id);
-
 create table sae.Album_Tag (
-    album_id bigint,
+    album_id BIGINT,
     tag_id int,
     FOREIGN KEY (album_id) REFERENCES sae.Album (album_id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES sae.Tag (tag_id) ON DELETE CASCADE,
@@ -348,7 +339,7 @@ create table sae.Album_Tag (
 CREATE INDEX idx_at_tag ON sae.Album_Tag(tag_id);
 
 create table sae.Track_Tag(
-    track_id bigint,
+    track_id BIGINT,
     tag_id int,
     FOREIGN KEY (track_id) REFERENCES sae.Track (track_id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES sae.Tag (tag_id) ON DELETE CASCADE,
@@ -357,7 +348,7 @@ create table sae.Track_Tag(
 CREATE INDEX idx_tt_tag ON sae.Track_Tag(tag_id);
 
 create table sae.Artist_Tag(
-    artist_id bigint,
+    artist_id BIGINT,
     tag_id int,
     FOREIGN KEY (artist_id) REFERENCES sae.Artist (artist_id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES sae.Tag (tag_id) ON DELETE CASCADE,
@@ -366,7 +357,7 @@ create table sae.Artist_Tag(
 CREATE INDEX idx_art_tag ON sae.Artist_Tag(tag_id);
 
 create table sae.User_Artist_Favorite(
-    artist_id bigint,
+    artist_id BIGINT,
     user_id int,
     FOREIGN KEY (artist_id) REFERENCES sae.Artist (artist_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
@@ -376,7 +367,7 @@ create table sae.User_Artist_Favorite(
 CREATE INDEX idx_uaf_user ON sae.User_Artist_Favorite(user_id);
 
 create table sae.Artist_Language (
-    artist_id bigint,
+    artist_id BIGINT,
     language_id int,
     FOREIGN KEY (artist_id) REFERENCES sae.Artist (artist_id) ON DELETE CASCADE,
     FOREIGN KEY (language_id) REFERENCES sae.Language (language_id) ON DELETE CASCADE,
@@ -397,7 +388,7 @@ CREATE INDEX idx_lh_playlist ON sae.Listening_History(playlist_id);
 
 create table sae.User_Album_Favorite (
     user_id int,
-    album_id bigint,
+    album_id BIGINT,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (album_id) REFERENCES sae.Album (album_id) ON DELETE CASCADE,
@@ -407,8 +398,8 @@ CREATE INDEX idx_uaf_album ON sae.User_Album_Favorite(album_id);
 
 create table sae.User_Album_Listening (
     user_id int,
-    album_id bigint,
-    nb_listening int DEFAULT(1),
+    album_id BIGINT,
+    nb_listening int,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (album_id) REFERENCES sae.Album (album_id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, album_id)
@@ -417,8 +408,8 @@ CREATE INDEX idx_ual_album ON sae.User_Album_Listening(album_id);
 
 create table sae.User_Playlist_Listening (
     user_id int,
-    playlist_id bigint,
-    nb_listening int DEFAULT(1),
+    playlist_id int,
+    nb_listening int,
     FOREIGN KEY (user_id) REFERENCES sae.User (user_id) ON DELETE CASCADE,
     FOREIGN KEY (playlist_id) REFERENCES sae.Playlist (playlist_id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, playlist_id)
@@ -437,7 +428,7 @@ DECLARE
     fk_column_name TEXT;
     target_table   TEXT;
     target_column  TEXT;
-    record_id      INT;
+    record_id      BIGINT;
     diff           INT;
 BEGIN
     fk_column_name := TG_ARGV[0]; 
@@ -765,8 +756,6 @@ CREATE OR REPLACE TRIGGER tg_majGlobal
   FOR EACH ROW
   EXECUTE PROCEDURE majGlobal();
 
-
-
 CREATE OR REPLACE FUNCTION sae.initStatFunc() 
 RETURNS TRIGGER AS $$
 BEGIN 
@@ -818,7 +807,7 @@ CREATE TRIGGER trg_protect_stats
 */
 
 CREATE OR REPLACE VIEW sae.View_User AS
-SELECT user_id, pseudo, image, situation_name, birth_year, liked_tracks, login, email, gender, last_calculated_at, mdp
+SELECT user_id, pseudo, image, situation_name, birth_year, liked_tracks, user_login, email, user_gender, last_calculated_at, user_mdp
 FROM sae.User;
 
 DROP MATERIALIZED VIEW IF EXISTS sae.View_Track_Materialise CASCADE;
@@ -846,6 +835,7 @@ SELECT
     alb.album_producer,
     alb.album_image_file,
     a.artist_id,
+    gmaj.genre_title AS track_genre_maj,
     a.artist_name,
     STRING_AGG(DISTINCT tag.tag_name, ', ') AS tags_list,
     STRING_AGG(DISTINCT g.genre_title, ', ') AS genres_list,
@@ -861,6 +851,8 @@ FROM
     LEFT JOIN sae.Stats_echonest s ON t.track_id = s.track_id
     LEFT JOIN sae.Track_Tag tt ON tt.track_id = t.track_id
     LEFT JOIN sae.Tag tag ON tt.tag_id = tag.tag_id
+    LEFT JOIN sae.Track_Genre_Majoritaire tgm ON tgm.track_id = t.track_id
+    LEFT JOIN sae.Genre gmaj ON gmaj.genre_id = tgm.genre_id
     LEFT JOIN sae.Track_Language tl ON tl.track_id = t.track_id
     LEFT JOIN sae.Language l ON tl.language_id = l.language_id
     LEFT JOIN sae.Track_Genre tg ON t.track_id = tg.track_id
@@ -881,6 +873,7 @@ GROUP BY
     s.track_id,
     s.danceability, 
     s.energy, 
+    gmaj.genre_title,
     s.tempo;
 
 CREATE UNIQUE INDEX idx_view_track_mat_id ON sae.View_Track_Materialise (track_id);
