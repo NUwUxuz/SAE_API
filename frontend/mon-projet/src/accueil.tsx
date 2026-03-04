@@ -125,10 +125,12 @@ export default function Accueil({ isConnected = false, userId }: AccueilProps) {
     setModalOpen(true)
   }
 
-  return (
+    return (
+    
     <>
-
+     
       <div className="accueil-layout">
+         {isConnected && (
         <nav className="menu-favoris">
           <ul className="list-aime">
             <li>Écouté récemment</li>
@@ -149,6 +151,7 @@ export default function Accueil({ isConnected = false, userId }: AccueilProps) {
 
           <ul className="list-playlist"></ul>
         </nav>
+         )}
         <main className="accueil-content">
 
 
