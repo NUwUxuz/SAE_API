@@ -153,6 +153,13 @@ class User(Base):
     frequency_interval: Mapped[Optional[str]] = mapped_column(String(50))
     last_calculated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
+    # RELATION AJOUTÉE : Permet d'accéder aux rôles de l'utilisateur
+    roles: Mapped[list["Role"]] = relationship(
+        "Role", 
+        secondary="sae.user_role", 
+        back_populates="users"
+    )
+    
 class SearchHistory(Base):
     __tablename__ = 'search_history'
     history_id: Mapped[int] = mapped_column(primary_key=True)
@@ -384,3 +391,49 @@ class ViewFavoriteListens(Base):
     album_favorites: Mapped[Optional[int]] = mapped_column(Integer)
     playlist_listens: Mapped[Optional[int]] = mapped_column(Integer)
     playlist_favorites: Mapped[Optional[int]] = mapped_column(Integer)
+    
+# =================================================================================
+# |-                         Sécurité (RBAC)
+# =================================================================================
+
+class RolePermission(Base):
+    """Table de liaison entre les rôles et les permissions"""
+    __tablename__ = 'role_permission'
+    role_id: Mapped[int] = mapped_column(ForeignKey('sae.role.role_id', ondelete="CASCADE"), primary_key=True)
+    permission_id: Mapped[int] = mapped_column(ForeignKey('sae.permission.permission_id', ondelete="CASCADE"), primary_key=True)
+
+class UserRole(Base):
+    """Table de liaison entre les utilisateurs et les rôles"""
+    __tablename__ = 'user_role'
+    user_id: Mapped[int] = mapped_column(ForeignKey('sae.user.user_id', ondelete="CASCADE"), primary_key=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey('sae.role.role_id', ondelete="CASCADE"), primary_key=True)
+
+class Role(Base):
+    __tablename__ = 'role'
+    role_id: Mapped[int] = mapped_column(primary_key=True)
+    role_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+
+    # Relation vers les permissions via la table de liaison
+    permissions: Mapped[list["Permission"]] = relationship(
+        "Permission", 
+        secondary="sae.role_permission", 
+        back_populates="roles"
+    )
+    # Relation vers les utilisateurs via la table de liaison
+    users: Mapped[list["User"]] = relationship(
+        "User", 
+        secondary="sae.user_role", 
+        back_populates="roles"
+    )
+
+class Permission(Base):
+    __tablename__ = 'permission'
+    permission_id: Mapped[int] = mapped_column(primary_key=True)
+    permission_label: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+
+    # Relation inverse vers les rôles
+    roles: Mapped[list["Role"]] = relationship(
+        "Role", 
+        secondary="sae.role_permission", 
+        back_populates="permissions"
+    )

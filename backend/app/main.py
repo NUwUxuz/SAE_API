@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
@@ -9,7 +9,8 @@ import bcrypt
 from models import ( 
     Album, User, Playlist, Track, Artist, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise, ArtistAlbumTrack, ListeningHistory
+    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise, ArtistAlbumTrack, ListeningHistory,
+    Role, Permission
 )
 
 import schema
@@ -107,10 +108,27 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise credentials_exception
         
-    user = db.query(User).filter(User.user_id == user_id).first()
+    user = db.query(User).filter(User.user_id == int(user_id)).first()
     if user is None:
         raise credentials_exception
     return user
+
+def has_permission(required_permission: str):
+    """Vérifie si l'utilisateur a le droit d'effectuer une action via ses rôles."""
+    def permission_checker(current_user: User = Depends(get_current_user)):
+        # On extrait toutes les permissions de tous les rôles de l'utilisateur
+        user_permissions = {p.permission_label for r in current_user.roles for p in r.permissions}
+        
+        # Un ADMIN a souvent tous les droits par défaut (optionnel)
+        user_roles = {r.role_name for r in current_user.roles}
+        
+        if "ADMIN" not in user_roles and required_permission not in user_permissions:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Permission refusée : '{required_permission}' requise."
+            )
+        return current_user
+    return permission_checker
 
 
 ###########################################
@@ -126,12 +144,18 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not verify_password(form_data.password, user.user_mdp):
         raise HTTPException(status_code=401, detail="Login ou mot de passe incorrect")
 
-    # Générer le token
-    access_token = create_access_token(data={"sub": str(user.user_id)})
+    # 1. On récupère les noms des rôles de l'utilisateur
+    user_roles = [r.role_name for r in user.roles]
     
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
+    # 2. ON GÉNÈRE LE TOKEN UNE SEULE FOIS avec les rôles inclus
+    access_token = create_access_token(data={"sub": str(user.user_id), "roles": user_roles})
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "roles": user_roles # Utile pour le frontend
+    }
+    
 ######## GET ##
 
 @app.get("/artist") 
@@ -476,7 +500,7 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 @app.post("/playlist", response_model=schema.Playlist, status_code=201)
-def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db), current_user: User = Depends(has_permission("playlist_create"))):
     try:
         playlist_dict = playlist_data.model_dump()
         playlist_dict["user_id"] = current_user.user_id
@@ -557,7 +581,7 @@ def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavor
     return new_playlist_user_favorite
 
 @app.post("/trackUserFavorite", status_code=201)
-def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(has_permission("track_like"))):
     
     # Vérifie si déjà présent
     existing = db.query(TrackUserFavorite).filter(
@@ -876,7 +900,8 @@ def delete_playlist(playlist_id: int, db: Session = Depends(get_db), current_use
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist non trouvée")
     
-    if playlist.user_id != current_user.user_id:
+    is_admin = any(r.role_name == "ADMIN" for r in current_user.roles)
+    if not is_admin and playlist.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que vos propres playlists")
     
     db.delete(playlist)

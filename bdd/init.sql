@@ -418,6 +418,94 @@ CREATE INDEX idx_upl_playlist ON sae.User_Playlist_Listening(playlist_id);
 
 /*
 * =================================================================================
+* |-                             Roles / Permissions
+* =================================================================================
+*/
+
+-- Liste des rôles possibles (ADMIN, USER, ARTIST)
+CREATE TABLE sae.Role (
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- Liste des actions possibles (create_playlist, delete_any_track, edit_artist, create_track)
+CREATE TABLE sae.Permission (
+    permission_id SERIAL PRIMARY KEY,
+    permission_label VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Table de liaison : quel rôle possède quelle permission ?
+CREATE TABLE sae.Role_Permission (
+    role_id INT,
+    permission_id INT,
+    PRIMARY KEY (role_id, permission_id),
+    
+    CONSTRAINT fk_role_id 
+        FOREIGN KEY (role_id) 
+        REFERENCES sae.Role(role_id) 
+        ON DELETE CASCADE,
+        
+    CONSTRAINT fk_permission_id 
+        FOREIGN KEY (permission_id) 
+        REFERENCES sae.Permission(permission_id) 
+        ON DELETE CASCADE
+);
+
+-- Table de liaison : quel utilisateur a quel rôle ?
+CREATE TABLE sae.User_Role (
+    user_id INT,
+    role_id INT,
+    PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES sae.User(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES sae.Role(role_id) ON DELETE CASCADE
+);
+
+INSERT INTO sae.Role (role_name) VALUES 
+('ADMIN'), 
+('MODERATOR'), 
+('ARTIST'), 
+('USER');
+
+INSERT INTO sae.Permission (permission_label) VALUES 
+-- Permissions de base (USER)
+('track_listen'),          -- Droit d'écouter et d'incrémenter les stats
+('track_like'),            -- Ajouter aux favoris
+('playlist_create'),       -- Créer ses propres listes
+('playlist_edit_own'),     -- Modifier ses propres listes
+
+-- Permissions avancées (ARTIST / MODERATOR)
+('track_upload'),          -- Publier un nouveau morceau
+('album_create'),          -- Créer un album
+('track_edit_own'),        -- Modifier ses propres morceaux
+
+-- Permissions de contrôle (ADMIN)
+('user_ban'),              -- Désactiver un compte
+('track_delete_any'),      -- Modération de contenu
+('role_manage');           -- Modifier les droits des autres
+
+-- Droits pour le rôle USER (ID 4 si on suit l'ordre d'insertion)
+INSERT INTO sae.Role_Permission (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM sae.Role r, sae.Permission p
+WHERE r.role_name = 'USER' 
+AND p.permission_label IN ('track_listen', 'track_like', 'playlist_create', 'playlist_edit_own');
+
+-- Droits pour le rôle ARTIST (USER + Uploads)
+INSERT INTO sae.Role_Permission (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM sae.Role r, sae.Permission p
+WHERE r.role_name = 'ARTIST' 
+AND p.permission_label IN ('track_listen', 'track_like', 'playlist_create', 'playlist_edit_own', 'track_upload', 'album_create', 'track_edit_own');
+
+-- Droits pour l'ADMIN (Tout)
+INSERT INTO sae.Role_Permission (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM sae.Role r, sae.Permission p
+WHERE r.role_name = 'ADMIN';
+
+
+/*
+* =================================================================================
 * |-                             Fonctions / Triggers
 * =================================================================================
 */
@@ -799,6 +887,29 @@ CREATE TRIGGER trg_protect_stats
     FOR EACH ROW
     EXECUTE FUNCTION sae.block_manual_changes();
 
+CREATE OR REPLACE FUNCTION sae.tg_assign_default_role()
+RETURNS TRIGGER AS $$
+DECLARE
+    default_role_id INT;
+BEGIN
+    -- 1. On récupère l'ID du rôle par défaut (ex: 'USER')
+    -- On utilise COALESCE pour éviter de planter si le rôle n'existe pas encore
+    SELECT role_id INTO default_role_id FROM sae.Role WHERE role_name = 'USER';
+
+    -- 2. Si le rôle existe, on l'attribue au nouvel utilisateur
+    IF default_role_id IS NOT NULL THEN
+        INSERT INTO sae.User_Role (user_id, role_id)
+        VALUES (NEW.user_id, default_role_id);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_after_user_insert
+AFTER INSERT ON sae.User
+FOR EACH ROW
+EXECUTE FUNCTION sae.tg_assign_default_role();
 
 /*
 * =================================================================================
@@ -902,3 +1013,15 @@ GROUP BY
     alb.album_listens,
     p.playlist_id,
     p.playlist_listens;
+
+CREATE OR REPLACE VIEW sae.view_user_permissions AS
+SELECT 
+    u.user_id,
+    u.pseudo,
+    r.role_name,
+    p.permission_label
+FROM sae.User u
+JOIN sae.User_Role ur ON u.user_id = ur.user_id
+JOIN sae.Role r ON ur.role_id = r.role_id
+JOIN sae.Role_Permission rp ON r.role_id = rp.role_id
+JOIN sae.Permission p ON rp.permission_id = p.permission_id;
