@@ -12,6 +12,8 @@ import Login from "./login"
 import Register from "./register"
 import CGU from "./CGU"
 import MentionsLegales from "./mentions_legales"
+import Contact from "./Contact"
+
 import PlaylistDetail from "./components/PlaylistDetail"
 import AlbumDetail from "./components/AlbumDetail"
 
@@ -150,6 +152,8 @@ function App() {
       case "mentions_legales":
         return <MentionsLegales />
 
+      case "contact":
+        return <Contact onNavigate={setPage} />
       default:
         return (
           <Accueil
