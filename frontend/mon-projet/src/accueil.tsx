@@ -4,7 +4,6 @@ import CarteChanson from "./components/carte_chanson"
 import CartePlaylist from "./components/carte_playlist"
 import CarteAlbum from "./components/carte_album"
 import AddToPlaylistModal from "./components/AddToPlaylistModal"
-import Lecture from "./components/Lecture"
 
 import { getChansons } from "./services/chansonService"
 import type { Playlist } from "./types/Playlist"
@@ -313,17 +312,6 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist, o
               />
             ))}
           </Carousel>
-          <Lecture 
-                trackId={1}
-                title={"reine des neiges"}
-                artist={ "Artiste inconnu"}
-                audioUrl=""
-
-                isConnected={isConnected}> 
-                onAdd={}
-                </Lecture>
-                
-
         </main>
       </div>
 

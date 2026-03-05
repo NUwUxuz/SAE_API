@@ -354,6 +354,7 @@ class ViewTrackMaterialise(Base):
     track_composer: Mapped[Optional[str]] = mapped_column(String(255))
     track_lyricist: Mapped[Optional[str]] = mapped_column(String(255))
     track_publisher: Mapped[Optional[str]] = mapped_column(String(255))
+    preview: Mapped[Optional[str]] = mapped_column(String(512))
     
     album_id: Mapped[Optional[int]] = mapped_column(BigInteger)
     album_title: Mapped[Optional[str]] = mapped_column(String(150))
