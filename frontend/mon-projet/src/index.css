@@ -117,6 +117,9 @@ button:focus-visible {
 
 .header {
   height: var(--header-height);
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -431,6 +434,17 @@ button:focus-visible {
   flex-direction: column;
   gap: 2rem;
   border-right: 1px solid var(--color-border);
+}
+
+.menu-favoris div {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  z-index: 9;
+  position: fixed;
+  top: 20vh;
+  width: 260px;
+  min-width: 220px;
 }
 
 /* Titres section */

@@ -4,7 +4,7 @@ import CarteChanson from "./components/carte_chanson"
 import CartePlaylist from "./components/carte_playlist"
 import CarteAlbum from "./components/carte_album"
 import AddToPlaylistModal from "./components/AddToPlaylistModal"
-import Lecture from "./components/Lecture"
+// import Lecture from "./components/Lecture"
 
 import { getChansons } from "./services/chansonService"
 import type { Playlist } from "./types/Playlist"
@@ -206,37 +206,39 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist, o
       <div className="accueil-layout">
          {isConnected && (
         <nav className="menu-favoris">
-          <ul className="list-aime">
-            <li>Écouté récemment</li>
-            <li>Titres aimés</li>
-            <li>Albums</li>
-            <li>Artistes</li>
-          </ul>
-
-          <button
-            className="btn-add-playlist"
-            onClick={() => {
-              setSelectedTrackId(null)
-              setModalOpen(true)
-            }}
-          >
-            Ajouter une Playlist
-          </button>
-
-          {isConnected && (
-            <ul className="list-playlist">
-              {userPlaylists.map((pl) => (
-                <li
-                  key={pl.playlist_id}
-                  className="playlist-menu-item"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => onOpenPlaylist(pl.playlist_id)}
-                >
-                  {pl.playlist_name}
-                </li>
-              ))}
+          <div>
+            <ul className="list-aime">
+              <li>Écouté récemment</li>
+              <li>Titres aimés</li>
+              <li>Albums</li>
+              <li>Artistes</li>
             </ul>
-          )}
+
+            <button
+              className="btn-add-playlist"
+              onClick={() => {
+                setSelectedTrackId(null)
+                setModalOpen(true)
+              }}
+            >
+              Ajouter une Playlist
+            </button>
+
+            {isConnected && (
+              <ul className="list-playlist">
+                {userPlaylists.map((pl) => (
+                  <li
+                    key={pl.playlist_id}
+                    className="playlist-menu-item"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => onOpenPlaylist(pl.playlist_id)}
+                  >
+                    {pl.playlist_name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </nav>
          )}
         <main className="accueil-content">
