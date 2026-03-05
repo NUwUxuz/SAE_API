@@ -6,18 +6,19 @@ export type UserProfile = {
     pseudo: string
     email: string
     image?: string
+    // Ajout des rôles dans le profil pour plus de clarté
+    roles?: string[]
 }
 
-// Typage pour l'inscription (à adapter selon tes colonnes DB)
 export type RegisterData = {
     user_login: string
-    mdp: string
+    user_mdp: string // Note: vérifie si c'est 'mdp' ou 'user_mdp' dans ton schéma
     pseudo: string
     email: string
 }
 
 /**
- * Connecte l'utilisateur et initialise la session locale
+ * Connecte l'utilisateur, stocke le token et ses rôles
  */
 export async function login(username: string, password: string) {
     const formData = new FormData()
@@ -30,30 +31,30 @@ export async function login(username: string, password: string) {
     })
 
     if (!response.ok) {
-        // En cas d'erreur de login, on s'assure que rien ne reste en local
         logout() 
         const error = await response.json().catch(() => ({}))
         throw new Error(error.detail || "Échec de la connexion")
     }
 
     const data = await response.json()
-    // 1. Stockage du token
+    
+    // 1. Stockage du token et des rôles renvoyés par ton nouveau backend
     localStorage.setItem("token", data.access_token)
+    // On stocke les rôles sous forme de chaîne JSON
+    localStorage.setItem("user_roles", JSON.stringify(data.roles || []))
 
     try {
-        // 2. Récupération du profil pour valider le token et avoir l'ID
         const userProfile = await getCurrentUser()
         localStorage.setItem("user_id", userProfile.user_id.toString())
-        return { token: data.access_token, user: userProfile }
+        return { token: data.access_token, user: userProfile, roles: data.roles }
     } catch (err) {
         logout()
-        throw new Error("Erreur lors de la récupération du profil après connexion")
+        throw new Error("Erreur lors de la récupération du profil")
     }
 }
 
 /**
- * Récupère les infos de l'utilisateur connecté.
- * Si le token est invalide/expiré, nettoie la session et rejette.
+ * Récupère les infos de l'utilisateur connecté
  */
 export async function getCurrentUser(): Promise<UserProfile> {
     const token = localStorage.getItem("token")
@@ -63,36 +64,63 @@ export async function getCurrentUser(): Promise<UserProfile> {
         throw new Error("Non authentifié")
     }
 
+    const response = await fetch(`${API_URL}/user`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    })
+
+    if (response.status === 401 || response.status === 403) {
+        logout()
+        throw new Error("Session expirée")
+    }
+
+    if (!response.ok) throw new Error("Erreur serveur")
+
+    return await response.json()
+}
+
+/**
+ * Supprime proprement la session
+ */
+export function logout() {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user_id")
+    localStorage.removeItem("user_roles")
+}
+
+/**
+ * NOUVEAU : Vérifie si l'utilisateur possède un rôle spécifique
+ * Utile pour : { hasRole('ADMIN') && <button>Supprimer tout</button> }
+ */
+export function hasRole(roleName: string): boolean {
+    const rolesRaw = localStorage.getItem("user_roles")
+    if (!rolesRaw) return false
+    
     try {
-        const response = await fetch(`${API_URL}/user`, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        })
-
-        // Si le serveur renvoie 401 (Unauthorized) ou 403 (Forbidden)
-        if (response.status === 401 || response.status === 403) {
-            logout()
-            throw new Error("Session expirée")
-        }
-
-        if (!response.ok) {
-            throw new Error("Erreur serveur")
-        }
-
-        return await response.json()
-    } catch (error) {
-        // En cas de coupure réseau ou erreur fatale, on considère la session compromise
-        if (error instanceof Error && error.message === "Session expirée") {
-            throw error
-        }
-        throw new Error("Impossible de joindre le serveur")
+        const roles: string[] = JSON.parse(rolesRaw)
+        return roles.includes(roleName) || roles.includes("ADMIN")
+    } catch {
+        return false
     }
 }
 
 /**
+ * Helper pour les appels API (ajoute le header Auth automatiquement)
+ */
+export function getAuthHeader() {
+    const token = localStorage.getItem("token")
+    return token ? { "Authorization": `Bearer ${token}` } : {}
+}
+
+export function isAuthenticated(): boolean {
+    return !!localStorage.getItem("token")
+}
+
+/**
  * Inscrit un nouvel utilisateur
+ * @param userData Objet contenant user_login, user_mdp, pseudo, email
  */
 export async function register(userData: RegisterData) {
     const response = await fetch(`${API_URL}/user`, {
@@ -101,27 +129,12 @@ export async function register(userData: RegisterData) {
             "Content-Type": "application/json"
         },
         body: JSON.stringify(userData)
-    })
+    });
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.detail || "Échec de l'inscription")
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || "Échec de l'inscription");
     }
 
-    return response.json()
-}
-
-/**
- * Supprime proprement la session locale
- */
-export function logout() {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user_id")
-}
-
-/**
- * Helper : Vérifie si un token existe sans faire d'appel API
- */
-export function isAuthenticated(): boolean {
-    return !!localStorage.getItem("token")
+    return await response.json();
 }

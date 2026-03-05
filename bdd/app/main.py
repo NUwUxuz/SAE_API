@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import os
 import io
+import sys
 import time
 import csv  # <--- IMPORT CRUCIAL
 import cleaning
@@ -36,6 +37,17 @@ while not connected:
         time.sleep(1)
 
 # --- 3. FONCTIONS ---
+
+def is_db_populated(engine):
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    # On vérifie si la table "User" existe et si elle a des lignes
+    if "user" in inspector.get_table_names(schema="sae"):
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT COUNT(*) FROM sae.user"))
+            count = result.scalar()
+            return count > 0
+    return False
 
 def psql_insert_copy(table, conn, keys, data_iter):
     """
@@ -202,128 +214,152 @@ def harvest_everything(limit_count=20):
 
 def main():
     # ÉTAPE 0 : INIT SQL
-    print("🧹 [ÉTAPE 0] Initialisation SQL...")
-    with engine.begin() as conn:
-        if os.path.exists(sql_path):
-            with open(sql_path, "r", encoding="utf-8") as f:
-                conn.execute(text(f.read()))
-            print("✅ Tables recréées.")
-        else:
-            print(f"⚠️ ERREUR : {sql_path} introuvable.")
-            return
+    if is_db_populated(engine):
+        print("✅ La base de données est déjà peuplée. Saut de l'étape d'importation.")
+        sys.exit(0) # On sort proprement
+    else:
+        print("🧹 [ÉTAPE 0] Initialisation SQL...")
+        with engine.begin() as conn:
+            if os.path.exists(sql_path):
+                with open(sql_path, "r", encoding="utf-8") as f:
+                    conn.execute(text(f.read()))
+                print("✅ Tables recréées.")
+            else:
+                print(f"⚠️ ERREUR : {sql_path} introuvable.")
+                return
 
-    # ÉTAPE 1 : LECTURE CSV
-    print("📂 [ÉTAPE 1] Lecture CSV...")
-    df_questionnaire = pd.read_csv(os.path.join(base_dir, "questionnaire.csv"))
-    df_raw_tracks = pd.read_csv(os.path.join(base_dir, "raw_tracks.csv"))
-    df_raw_albums = pd.read_csv(os.path.join(base_dir, "raw_albums.csv"))
-    df_raw_artists = pd.read_csv(os.path.join(base_dir, "raw_artists.csv"))
-    df_raw_genres = pd.read_csv(os.path.join(base_dir, "raw_genres.csv"))
-    df_raw_echonest = pd.read_csv(os.path.join(base_dir, "raw_echonest.csv"), header=2, on_bad_lines="skip")
+        # ÉTAPE 1 : LECTURE CSV
+        print("📂 [ÉTAPE 1] Lecture CSV...")
+        df_questionnaire = pd.read_csv(os.path.join(base_dir, "questionnaire.csv"))
+        df_raw_tracks = pd.read_csv(os.path.join(base_dir, "raw_tracks.csv"))
+        df_raw_albums = pd.read_csv(os.path.join(base_dir, "raw_albums.csv"))
+        df_raw_artists = pd.read_csv(os.path.join(base_dir, "raw_artists.csv"))
+        df_raw_genres = pd.read_csv(os.path.join(base_dir, "raw_genres.csv"))
+        df_raw_echonest = pd.read_csv(os.path.join(base_dir, "raw_echonest.csv"), header=2, on_bad_lines="skip")
 
-    # Préparation
-    df_users = cleaning.preparer_table_users(df_questionnaire)
-    df_licenses = cleaning.preparer_table_licenses(df_raw_tracks)
-    df_types = cleaning.preparer_table_album_type(df_raw_albums)
-    df_languages = cleaning.preparer_table_languages(df_raw_tracks)
-    df_tags = cleaning.preparer_table_tags_globale(df_raw_tracks, df_raw_albums, df_raw_artists)
-    
-    df_genres_pret = cleaning.preparer_table_genres(df_raw_genres)
-    df_pour_insertion_genre = df_genres_pret.copy()
-    df_pour_insertion_genre["genre_parent_id"] = None
-    
-    df_artist = cleaning.preparer_table_artists(clean_csv(df_raw_artists))
-    df_album = cleaning.preparer_table_albums(clean_csv(df_raw_albums))
-    df_track = cleaning.preparer_table_tracks(df_raw_tracks)
-    
-    # Mapping
-    df_mood = pd.DataFrame(list(map_mood.items()), columns=["mood_name", "mood_id"])
-    df_contexte = pd.DataFrame(list(map_contexte.items()), columns=["context_name", "context_id"])
-    df_platform = pd.DataFrame(list(map_platforme.items()), columns=["platform_name", "platform_id"])
-    df_period = pd.DataFrame(list(map_periode.items()), columns=["period_interval", "period_id"])
-
-    # CONVERSION DES TYPES (Float -> Int)
-    print("🔧 Correction des types...")
-    try:
-        df_languages["language_id"] = pd.to_numeric(df_languages["language_id"], errors='coerce').fillna(0).astype(int)
-        df_licenses["license_id"] = pd.to_numeric(df_licenses["license_id"], errors='coerce').fillna(0).astype(int)
-        df_types["type_id"] = pd.to_numeric(df_types["type_id"], errors='coerce').fillna(0).astype(int)
-        df_tags["tag_id"] = pd.to_numeric(df_tags["tag_id"], errors='coerce').fillna(0).astype(int)
-        df_pour_insertion_genre["genre_id"] = pd.to_numeric(df_pour_insertion_genre["genre_id"], errors='coerce').fillna(0).astype(int)
-        df_artist["artist_id"] = pd.to_numeric(df_artist["artist_id"], errors='coerce').fillna(0).astype(int)
-        df_album["album_id"] = pd.to_numeric(df_album["album_id"], errors='coerce').fillna(0).astype(int)
-        df_track["track_id"] = pd.to_numeric(df_track["track_id"], errors='coerce').fillna(0).astype(int)
-    except Exception as e:
-        print(f"⚠️ Attention types : {e}")
-
-    # ÉTAPE 2 : INSERTION CSV (Via COPY csv.writer)
-    print("📥 [ÉTAPE 2] Insertion CSV...")
-    with engine.begin() as conn:
-        # Ref
-        df_users.to_sql("user", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_mood.to_sql("mood", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_contexte.to_sql("context", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_platform.to_sql("platform", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_period.to_sql("period", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+        # Préparation
+        df_users = cleaning.preparer_table_users(df_questionnaire)
+        df_licenses = cleaning.preparer_table_licenses(df_raw_tracks)
+        df_types = cleaning.preparer_table_album_type(df_raw_albums)
+        df_languages = cleaning.preparer_table_languages(df_raw_tracks)
+        df_tags = cleaning.preparer_table_tags_globale(df_raw_tracks, df_raw_albums, df_raw_artists)
         
-        # Meta Musique
-        df_types.to_sql("album_type", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_licenses.to_sql("license", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_languages.to_sql("language", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_tags.to_sql("tag", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        df_pour_insertion_genre.to_sql("genre", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+        df_genres_pret = cleaning.preparer_table_genres(df_raw_genres)
+        df_pour_insertion_genre = df_genres_pret.copy()
+        df_pour_insertion_genre["genre_parent_id"] = None
         
-        # Musique Core
-        print("   -> Insertion Artistes (Cela peut prendre un moment)...")
-        df_artist.to_sql("artist", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        print("   -> Insertion Albums...")
-        df_album.to_sql("album", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-        print("   -> Insertion Tracks...")
-        df_track.to_sql("track", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
-
-    cleaning.initialiser_stats_user(engine)
-    cleaning.initialiser_search_history(engine)
-    cleaning.finaliser_liens_parents(df_genres_pret, engine)
-
-    # Liaisons (to_sql standard ou copy selon besoin)
-    ids_tracks = set(pd.read_sql("SELECT track_id FROM sae.track", engine)["track_id"])
-    ids_albums = set(pd.read_sql("SELECT album_id FROM sae.album", engine)["album_id"])
-    ids_artists = set(pd.read_sql("SELECT artist_id FROM sae.artist", engine)["artist_id"])
-    ids_genres = set(pd.read_sql("SELECT genre_id FROM sae.genre", engine)["genre_id"])
-
-    with engine.begin() as conn:
-        cleaning.preparer_liaison_ternaire(df_raw_tracks, ids_tracks, ids_albums, ids_artists).to_sql(
-            "artist_album_track", conn, schema="sae", if_exists="append", index=False)
+        df_artist = cleaning.preparer_table_artists(clean_csv(df_raw_artists))
+        df_album = cleaning.preparer_table_albums(clean_csv(df_raw_albums))
+        df_track = cleaning.preparer_table_tracks(df_raw_tracks)
         
-        cleaning.preparer_stats_echonest(df_raw_echonest, ids_tracks).to_sql(
-            "stats_echonest", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+        # Mapping
+        df_mood = pd.DataFrame(list(map_mood.items()), columns=["mood_name", "mood_id"])
+        df_contexte = pd.DataFrame(list(map_contexte.items()), columns=["context_name", "context_id"])
+        df_platform = pd.DataFrame(list(map_platforme.items()), columns=["platform_name", "platform_id"])
+        df_period = pd.DataFrame(list(map_periode.items()), columns=["period_interval", "period_id"])
 
-        # Insère le reste des liaisons ici (track_genre, etc.) comme avant
-        cleaning.preparer_track_genre(df_raw_tracks, ids_genres).to_sql("track_genre", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_track_language(df_raw_tracks, engine).to_sql("track_language", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_album_tag(df_raw_albums, engine).to_sql("album_tag", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_track_tag(df_raw_tracks, engine).to_sql("track_tag", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_artist_tag(df_raw_artists, engine).to_sql("artist_tag", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_artist_language(df_raw_tracks, engine).to_sql("artist_language", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_track_genre_majoritaire(df_raw_tracks, engine).to_sql("track_genre_majoritaire", conn, schema="sae", if_exists="append", index=False)
+        # CONVERSION DES TYPES (Float -> Int)
+        print("🔧 Correction des types...")
+        try:
+            df_languages["language_id"] = pd.to_numeric(df_languages["language_id"], errors='coerce').fillna(0).astype(int)
+            df_licenses["license_id"] = pd.to_numeric(df_licenses["license_id"], errors='coerce').fillna(0).astype(int)
+            df_types["type_id"] = pd.to_numeric(df_types["type_id"], errors='coerce').fillna(0).astype(int)
+            df_tags["tag_id"] = pd.to_numeric(df_tags["tag_id"], errors='coerce').fillna(0).astype(int)
+            df_pour_insertion_genre["genre_id"] = pd.to_numeric(df_pour_insertion_genre["genre_id"], errors='coerce').fillna(0).astype(int)
+            df_artist["artist_id"] = pd.to_numeric(df_artist["artist_id"], errors='coerce').fillna(0).astype(int)
+            df_album["album_id"] = pd.to_numeric(df_album["album_id"], errors='coerce').fillna(0).astype(int)
+            df_track["track_id"] = pd.to_numeric(df_track["track_id"], errors='coerce').fillna(0).astype(int)
+        except Exception as e:
+            print(f"⚠️ Attention types : {e}")
 
-        # Users Avancés
-        cleaning.preparer_score_period(df_questionnaire, engine).to_sql("score_period", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_score_mood(df_questionnaire, engine).to_sql("score_mood", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_user_context(df_questionnaire, engine).to_sql("user_context", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_user_platform(df_questionnaire, engine).to_sql("user_platform", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_user_languages(df_questionnaire).to_sql("user_language", conn, schema="sae", if_exists="append", index=False)
-        cleaning.preparer_genre_top_user(df_questionnaire, engine).to_sql("genre_top_user", conn, schema="sae", if_exists="append", index=False)
+        # ÉTAPE 2 : INSERTION CSV (Via COPY csv.writer)
+        print("📥 [ÉTAPE 2] Insertion CSV...")
+        with engine.begin() as conn:
+            # Ref
+            df_users.to_sql("user", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_mood.to_sql("mood", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_contexte.to_sql("context", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_platform.to_sql("platform", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_period.to_sql("period", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            
+            # Meta Musique
+            df_types.to_sql("album_type", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_licenses.to_sql("license", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_languages.to_sql("language", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_tags.to_sql("tag", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            df_pour_insertion_genre.to_sql("genre", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            
+            # Musique Core
+            print("   -> Insertion Artistes (Cela peut prendre un moment)...")
+            df_artist.to_sql("artist", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            print("   -> Insertion Albums...")
+            df_album.to_sql("album", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+            print("   -> Insertion Tracks...")
+            df_track.to_sql("track", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
 
-    # ÉTAPE 3 : DEEZER
-    print("🌍 [ÉTAPE 3] Deezer...")
-    harvest_everything(limit_count=10)
-    
-    with engine.begin() as conn:
-        conn.execute(text("REFRESH MATERIALIZED VIEW sae.view_track_materialise;"))
-    print("✅ Vue matérialisée mise à jour avec succès.")
+        cleaning.initialiser_stats_user(engine)
+        cleaning.initialiser_search_history(engine)
+        cleaning.finaliser_liens_parents(df_genres_pret, engine)
 
-    print("✅ [SUCCESS] Terminé !")
+        # Liaisons (to_sql standard ou copy selon besoin)
+        ids_tracks = set(pd.read_sql("SELECT track_id FROM sae.track", engine)["track_id"])
+        ids_albums = set(pd.read_sql("SELECT album_id FROM sae.album", engine)["album_id"])
+        ids_artists = set(pd.read_sql("SELECT artist_id FROM sae.artist", engine)["artist_id"])
+        ids_genres = set(pd.read_sql("SELECT genre_id FROM sae.genre", engine)["genre_id"])
+
+        with engine.begin() as conn:
+            cleaning.preparer_liaison_ternaire(df_raw_tracks, ids_tracks, ids_albums, ids_artists).to_sql(
+                "artist_album_track", conn, schema="sae", if_exists="append", index=False)
+            
+            cleaning.preparer_stats_echonest(df_raw_echonest, ids_tracks).to_sql(
+                "stats_echonest", conn, schema="sae", if_exists="append", index=False, method=psql_insert_copy)
+
+            # Insère le reste des liaisons ici (track_genre, etc.) comme avant
+            cleaning.preparer_track_genre(df_raw_tracks, ids_genres).to_sql("track_genre", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_track_language(df_raw_tracks, engine).to_sql("track_language", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_album_tag(df_raw_albums, engine).to_sql("album_tag", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_track_tag(df_raw_tracks, engine).to_sql("track_tag", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_artist_tag(df_raw_artists, engine).to_sql("artist_tag", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_artist_language(df_raw_tracks, engine).to_sql("artist_language", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_track_genre_majoritaire(df_raw_tracks, engine).to_sql("track_genre_majoritaire", conn, schema="sae", if_exists="append", index=False)
+
+            # Users Avancés
+            cleaning.preparer_score_period(df_questionnaire, engine).to_sql("score_period", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_score_mood(df_questionnaire, engine).to_sql("score_mood", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_user_context(df_questionnaire, engine).to_sql("user_context", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_user_platform(df_questionnaire, engine).to_sql("user_platform", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_user_languages(df_questionnaire).to_sql("user_language", conn, schema="sae", if_exists="append", index=False)
+            cleaning.preparer_genre_top_user(df_questionnaire, engine).to_sql("genre_top_user", conn, schema="sae", if_exists="append", index=False)
+
+        # ÉTAPE 3 : DEEZER
+        print("🌍 [ÉTAPE 3] Deezer...")
+        harvest_everything(limit_count=10)
+        
+        with engine.begin() as conn:
+            conn.execute(text("REFRESH MATERIALIZED VIEW sae.view_track_materialise;"))
+        print("✅ Vue matérialisée mise à jour avec succès.")
+
+        print("🔄 [ÉTAPE 4] Recalage des séquences SERIAL...")
+        with engine.begin() as conn:
+            recalage_sql = """
+            DO $$ 
+            DECLARE 
+                row RECORD;
+            BEGIN 
+                FOR row IN (SELECT table_name, column_name 
+                            FROM information_schema.columns 
+                            WHERE table_schema = 'sae' 
+                            AND column_default LIKE 'nextval%') 
+                LOOP
+                    EXECUTE format('SELECT setval(pg_get_serial_sequence(''sae.%I'', ''%I''), COALESCE(MAX(%I), 0) + 1, false) FROM sae.%I', 
+                                   row.table_name, row.column_name, row.column_name, row.table_name);
+                END LOOP;
+            END $$;
+            """
+            conn.execute(text(recalage_sql))
+            print("✅ Toutes les séquences ont été synchronisées avec les données importées.")
+
+        print("✅ [SUCCESS] Terminé !")
 
 if __name__ == "__main__":
     main()

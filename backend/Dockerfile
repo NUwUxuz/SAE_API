@@ -8,7 +8,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # On copie le contenu du dossier local "app" dans le dossier "/app" du conteneur
-COPY ./app . 
+COPY . .
 
 EXPOSE 8000
 
