@@ -502,8 +502,8 @@ button:focus-visible {
   background: rgba(0, 0, 0, 0.6);
   color: white;
   border: none;
-  width: 36px;
-  height: 36px;
+  /* width: 36px;
+  height: 36px; */
   border-radius: 50%;
   cursor: pointer;
   font-size: 22px;
@@ -1023,6 +1023,36 @@ button:focus-visible {
   margin: 5%;
 }
 
+/* zone d'ecoute */
 
+.lecture-page{
+    background-color: var(--color-border);
+    display: flex;
+    align-items: center;
+    
+    justify-content: space-around;
+    padding: 1em;
+    border-radius: 50px;
+}
 
+.lecture-page .info-image {
+    display: flex;
+    align-items: center;
+    
+    
+}
 
+.lecture-page .info-image  .pochette-wrapper{
+    width: 100%;
+    margin: 0.5em;
+}
+
+.lecture-page .play-btn{
+    color: var(--color-text);
+    background-color: var(--color-primary );                                                                                                                                   
+}
+
+.lecture-page .audio-player{
+    display: flex;
+    flex-direction: column;
+    }

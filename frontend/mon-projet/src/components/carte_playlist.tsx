@@ -1,5 +1,5 @@
 import { useState } from "react"
-import Coeur from "./Coeur"
+import Coeur from "./coeur"
 import GeneratedCover from "./GeneratedCover"
 
 type CartePlaylistProps = {
@@ -24,9 +24,10 @@ function CartePlaylist({
     e.stopPropagation()
     setIsFavorite((prev) => !prev)
   }
+  
 
   return (
-    <div className="carte-playlist" onClick={onClick}>
+    <div className="carte-playlist" >
       <div className="pochette-wrapper">
         <GeneratedCover title={title} />
         <Coeur
