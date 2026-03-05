@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconn
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_, func
 
 import bcrypt
 
@@ -139,21 +139,32 @@ def has_permission(required_permission: str):
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.user_login == form_data.username).first()
+    # On normalise l'entrée utilisateur en minuscules pour l'email
+    identifier = form_data.username.lower()
+
+    # Recherche flexible : login exact OU email en minuscules
+    user = db.query(User).filter(
+        or_(
+            User.user_login == form_data.username, # Login souvent sensible à la casse
+            func.lower(User.email) == identifier   # Email insensible à la casse
+        )
+    ).first()
     
     if not user or not verify_password(form_data.password, user.user_mdp):
-        raise HTTPException(status_code=401, detail="Login ou mot de passe incorrect")
+        # On renvoie 401 si l'utilisateur n'existe pas OU si le mdp est faux
+        raise HTTPException(
+            status_code=401, 
+            detail="Identifiant ou mot de passe incorrect",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # 1. On récupère les noms des rôles de l'utilisateur
     user_roles = [r.role_name for r in user.roles]
-    
-    # 2. ON GÉNÈRE LE TOKEN UNE SEULE FOIS avec les rôles inclus
     access_token = create_access_token(data={"sub": str(user.user_id), "roles": user_roles})
     
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
-        "roles": user_roles # Utile pour le frontend
+        "roles": user_roles
     }
     
 ######## GET ##

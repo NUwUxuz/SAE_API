@@ -339,6 +339,26 @@ def main():
             conn.execute(text("REFRESH MATERIALIZED VIEW sae.view_track_materialise;"))
         print("✅ Vue matérialisée mise à jour avec succès.")
 
+        print("🔄 [ÉTAPE 4] Recalage des séquences SERIAL...")
+        with engine.begin() as conn:
+            recalage_sql = """
+            DO $$ 
+            DECLARE 
+                row RECORD;
+            BEGIN 
+                FOR row IN (SELECT table_name, column_name 
+                            FROM information_schema.columns 
+                            WHERE table_schema = 'sae' 
+                            AND column_default LIKE 'nextval%') 
+                LOOP
+                    EXECUTE format('SELECT setval(pg_get_serial_sequence(''sae.%I'', ''%I''), COALESCE(MAX(%I), 0) + 1, false) FROM sae.%I', 
+                                   row.table_name, row.column_name, row.column_name, row.table_name);
+                END LOOP;
+            END $$;
+            """
+            conn.execute(text(recalage_sql))
+            print("✅ Toutes les séquences ont été synchronisées avec les données importées.")
+
         print("✅ [SUCCESS] Terminé !")
 
 if __name__ == "__main__":

@@ -1,0 +1,43 @@
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #2c2c2c; /* Couleur sombre pour coller au thème */
+  border: 1px solid #444;
+  border-radius: 8px;
+  min-width: 180px;
+  z-index: 1000;
+  margin-top: 10px;
+}
+
+.dropdown-list {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+.dropdown-list li {
+  padding: 10px 20px;
+  cursor: pointer;
+  color: white;
+  transition: background 0.2s;
+}
+
+.dropdown-list li:hover {
+  background-color: #3e3e3e;
+}
+
+.dropdown-list hr {
+  border: 0;
+  border-top: 1px solid #444;
+  margin: 5px 0;
+}
+
+.logout-option {
+  color: #ff4757 !important;
+}
+
+/* Ombre pour le relief */
+.shadow {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
