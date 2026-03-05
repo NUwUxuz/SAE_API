@@ -16,8 +16,7 @@ function CartePlaylist({
   title,
   creator,
   isConnected,
-  onAdd,
-  onClick
+  // onAdd
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
@@ -38,11 +37,11 @@ function CartePlaylist({
       </div>
 
       <article className="description">
-        <div>
-          <h3>{title}</h3>
-          <p>{creator}</p>
-        </div>
-        {isConnected && onAdd && (
+        	<div>
+          	<h3>{title}</h3>
+        		<p>{creator}</p>
+        	</div>
+          {/* {isConnected && onAdd && (
           <button
             className="btn-plus"
             onClick={(e) => {
@@ -63,9 +62,9 @@ function CartePlaylist({
               <path d="M5 12h14" />
               <path d="M12 5v14" />
             </svg>
-          </button>
-        )}
-      </article>
+            </button>
+          )} */}
+          </article>
     </div>
   )
 }

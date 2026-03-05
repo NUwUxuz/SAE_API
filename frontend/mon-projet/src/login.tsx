@@ -35,32 +35,31 @@ function Login({ onLogin, onRegister }: LoginProps) {
   return (
     <div className="login-page">
       <div className="login-container">
-        <h1 className="login-title">Connexion à Orchestra</h1>
+        <h1 className="login-title">Connexion</h1>
 
         <div className="login-form">
           {error && <div style={{ color: "var(--color-danger)", textAlign: "center", marginBottom: "1rem" }}>{error}</div>}
 
-          <div>
+          
             <label>Votre pseudo ou email</label>
             <input
+             className="champ"
               type="text"
               placeholder="Renseignez votre identifiant"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
             />
-          </div>
 
-          <div>
             <label>Votre mot de passe</label>
             <input
+             className="champ"
               type="password"
               placeholder="Renseignez un mot de passe"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
             />
-          </div>
         </div>
 
         <div className="login-actions">

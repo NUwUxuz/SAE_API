@@ -168,10 +168,12 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist, o
     setModalOpen(true)
   }
 
-  return (
+    return (
+    
     <>
-
+     
       <div className="accueil-layout">
+         {isConnected && (
         <nav className="menu-favoris">
           <ul className="list-aime">
             <li>Écouté récemment</li>
@@ -205,6 +207,7 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist, o
             </ul>
           )}
         </nav>
+         )}
         <main className="accueil-content">
 
 
