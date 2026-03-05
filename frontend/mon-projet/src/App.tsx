@@ -22,25 +22,21 @@ import type { Page } from "./types/Page"
 function App() {
   const [page, setPage] = useState<Page>("accueil")
 
-  // pour mémoriser quelle playlist on veut afficher
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null)
   const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null)
 
 
-  // 🔐 État de connexion
   const [isConnected, setIsConnected] = useState<boolean>(false)
   const [userId, setUserId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // 🚪 Fonction de déconnexion centralisée avec redirection
   const handleLogout = () => {
-    logout() // Supprime le localStorage via authService
+    logout() 
     setIsConnected(false)
     setUserId(null)
-    setPage("login") // Redirige vers login dès que la session est perdue
+    setPage("login") 
   }
 
-  // 🚀 Gestion du succès de connexion
   const handleLoginSuccess = () => {
     setIsConnected(true)
     const storedId = localStorage.getItem("user_id")
@@ -48,7 +44,7 @@ function App() {
     setPage("accueil")
   }
 
-  // 🛡️ Vérification de la session (au chargement et périodiquement)
+
   useEffect(() => {
     const verifyAuth = async () => {
       const token = localStorage.getItem("token")
@@ -65,7 +61,6 @@ function App() {
         setIsConnected(true)
         setUserId(user.user_id)
       } catch (error) {
-        // Si le token est expiré ou invalide (Erreur 401)
         handleLogout()
       } finally {
         setIsLoading(false)
@@ -90,7 +85,6 @@ function App() {
   }
 
 
-  // 📝 Gestionnaire de rendu pour inclure la redirection forcée
   const renderContent = () => {
     if (isLoading) return <div className="loading">Vérification de la session...</div>
 
