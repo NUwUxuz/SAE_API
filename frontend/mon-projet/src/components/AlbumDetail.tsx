@@ -111,12 +111,9 @@ export default function AlbumDetail({ albumId, isConnected }: AlbumDetailProps) 
         <div className="playlist-detail-container">
             <header className="playlist-header" style={{ background: "linear-gradient(to bottom, rgba(59, 130, 246, 0.15) 0%, var(--color-bg) 100%)" }}>
                 <div className="playlist-cover-large">
-                    {album?.album_image_file ? (
-                        <img src={album.album_image_file} alt={album.album_title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                        <GeneratedCover title={album?.album_title || "Album"} />
-                    )}
+                    <GeneratedCover title={album?.album_title || "Album"} />
                 </div>
+
                 <div className="playlist-info">
                     <span className="playlist-type">ALBUM</span>
                     <h1 className="playlist-title-huge">{album?.album_title}</h1>

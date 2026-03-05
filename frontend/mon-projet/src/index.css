@@ -543,8 +543,9 @@ button:focus-visible {
 }
 
 /* Carte */
-.login-container {
-  width: 800px;
+.login-container{
+  max-width: 400px;
+  /* width: 800px; */
   max-width: 95%;
   padding: 48px;
   background: #f0f0f0;
