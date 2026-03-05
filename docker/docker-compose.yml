@@ -34,11 +34,15 @@ services:
 
   backend:
     build: ../backend
+    volumes:
+      - ../backend/app:/app
     restart: always
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/mabase
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
     depends_on:
       db:
         condition: service_healthy
