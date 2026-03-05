@@ -6,7 +6,6 @@ type CartePlaylistProps = {
   id?: number
   title: string
   creator: string
-  pochette: string
   isConnected: boolean
   onAdd?: () => void
   onClick?: () => void
@@ -27,7 +26,7 @@ function CartePlaylist({
   
 
   return (
-    <div className="carte-playlist" >
+    <div className="carte-playlist">
       <div className="pochette-wrapper">
         <GeneratedCover title={title} />
         <Coeur
