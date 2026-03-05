@@ -66,6 +66,7 @@ h1 {
 
 
 button {
+    color:var(--color-text);
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
@@ -195,7 +196,7 @@ button:focus-visible {
 }
 
 /* Conteneur */
-.auth-menu {
+.auth-menu, .contact-page {
   display: flex;
   align-items: center;
   margin: 0 0 0 1em;
@@ -531,7 +532,7 @@ button:focus-visible {
 }
 
 /* Carte */
-.login-container{
+.login-container, .contact-form{
   max-width: 400px;
   /* width: 800px; */
   max-width: 95%;
@@ -1056,3 +1057,58 @@ button:focus-visible {
     display: flex;
     flex-direction: column;
     }
+
+
+
+
+/* 
+.contact-page {
+  max-width: 40rem;
+  margin: 3rem auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+input, textarea {
+  padding: 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.contact-button {
+  padding: 0.7rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: var(--color-primary);
+  color: var(--color-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.contact-button:hover {
+  background: #179444;
+}
+
+.contact-status {
+  font-size: 0.9rem;
+  color: #444;
+} */
