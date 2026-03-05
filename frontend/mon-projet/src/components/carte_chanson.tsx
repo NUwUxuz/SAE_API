@@ -74,22 +74,26 @@ function CarteChanson({
         {isConnected && onAdd && (
           <button
             className="btn-plus"
-            onClick={() => console.log("Ajouter à la playlist")}
-            >
+            onClick={(e) => {
+              e.stopPropagation()
+              onAdd()
+            }}
+          >
+
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="30"
-                height="30"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              xmlns="http://www.w3.org/2000/svg"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
             </svg>
-            </button>
+          </button>
         )}
       </article>
     </div>

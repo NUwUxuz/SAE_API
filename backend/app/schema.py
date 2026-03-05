@@ -51,6 +51,15 @@ class Album(AlbumBase):
     class Config:
         from_attributes = True
 
+class AlbumDetailed(AlbumBase):
+    album_id: int
+    artist_name: Optional[str] = None
+    track_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
 class Track(TrackBase):
     track_id: int
     
@@ -110,6 +119,14 @@ class Playlist(PlaylistBase):
 
     class Config:
         from_attributes = True
+
+class PlaylistDetailed(PlaylistBase):
+    playlist_id: int
+    creator_pseudo: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
     
 
 # ==================== Listening Stats Schemas ====================

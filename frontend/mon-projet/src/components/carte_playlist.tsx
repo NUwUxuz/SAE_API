@@ -3,11 +3,13 @@ import Coeur from "./Coeur"
 import GeneratedCover from "./GeneratedCover"
 
 type CartePlaylistProps = {
+  id?: number
   title: string
   creator: string
   pochette: string
   isConnected: boolean
   onAdd?: () => void
+  onClick?: () => void
 }
 
 function CartePlaylist({
@@ -18,20 +20,19 @@ function CartePlaylist({
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
-  const toggleFavorite = () => {
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation()
     setIsFavorite((prev) => !prev)
   }
 
   return (
-    <div className="carte-playlist">
+    <div className="carte-playlist" onClick={onClick}>
       <div className="pochette-wrapper">
         <GeneratedCover title={title} />
-
         <Coeur
           isFavorite={isFavorite}
           isConnected={isConnected}
           toggleFavorite={toggleFavorite}
-
         />
       </div>
 
@@ -43,20 +44,23 @@ function CartePlaylist({
           {/* {isConnected && onAdd && (
           <button
             className="btn-plus"
-            onClick={() => console.log("Ajouter à la playlist")}
-            >
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd();
+            }}
+          >
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="30"
-                height="30"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              xmlns="http://www.w3.org/2000/svg"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
             </svg>
             </button>
           )} */}
@@ -64,5 +68,6 @@ function CartePlaylist({
     </div>
   )
 }
+
 
 export default CartePlaylist

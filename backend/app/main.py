@@ -1,25 +1,28 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_, func
 
 import bcrypt
 
 from models import ( 
-    Album, User, Playlist, Track, Artist, ListeningHistory, UserAlbumListening, UserPlaylistListening,
+    Album, User, Playlist, Track, Artist, ArtistAlbumTrack, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
-    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise
+    PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise, ArtistAlbumTrack, ListeningHistory,
+    Role, Permission
 )
 
 import schema
 
+# 2. On importe les classes spécifiques pour tes fonctions de création
 from schema import (    
-    UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
-    PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
+    UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, 
+    UserPlaylistListeningCreate, PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, 
+    UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
     PlaylistTrackCreate, UserTrackListeningCreate, SearchHistoryCreate, TrackView,
-
-    UserUpdate, PlaylistUpdate, UserTrackListeningUpdate, UserAlbumListeningUpdate, UserPlaylistListeningUpdate
+    UserUpdate, PlaylistUpdate, UserTrackListeningUpdate, UserAlbumListeningUpdate, 
+    UserPlaylistListeningUpdate
 )
 
 import uvicorn
@@ -99,16 +102,33 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_login: str = payload.get("sub")
-        if user_login is None:
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
         
-    user = db.query(User).filter(User.user_login == user_login).first()
+    user = db.query(User).filter(User.user_id == int(user_id)).first()
     if user is None:
         raise credentials_exception
     return user
+
+def has_permission(required_permission: str):
+    """Vérifie si l'utilisateur a le droit d'effectuer une action via ses rôles."""
+    def permission_checker(current_user: User = Depends(get_current_user)):
+        # On extrait toutes les permissions de tous les rôles de l'utilisateur
+        user_permissions = {p.permission_label for r in current_user.roles for p in r.permissions}
+        
+        # Un ADMIN a souvent tous les droits par défaut (optionnel)
+        user_roles = {r.role_name for r in current_user.roles}
+        
+        if "ADMIN" not in user_roles and required_permission not in user_permissions:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Permission refusée : '{required_permission}' requise."
+            )
+        return current_user
+    return permission_checker
 
 
 ###########################################
@@ -119,17 +139,34 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.user_login == form_data.username).first()
+    # On normalise l'entrée utilisateur en minuscules pour l'email
+    identifier = form_data.username.lower()
+
+    # Recherche flexible : login exact OU email en minuscules
+    user = db.query(User).filter(
+        or_(
+            User.user_login == form_data.username, # Login souvent sensible à la casse
+            func.lower(User.email) == identifier   # Email insensible à la casse
+        )
+    ).first()
     
     if not user or not verify_password(form_data.password, user.user_mdp):
-        raise HTTPException(status_code=401, detail="Login ou mot de passe incorrect")
+        # On renvoie 401 si l'utilisateur n'existe pas OU si le mdp est faux
+        raise HTTPException(
+            status_code=401, 
+            detail="Identifiant ou mot de passe incorrect",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Générer le token
-    access_token = create_access_token(data={"sub": user.user_login})
+    user_roles = [r.role_name for r in user.roles]
+    access_token = create_access_token(data={"sub": str(user.user_id), "roles": user_roles})
     
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "roles": user_roles
+    }
+    
 ######## GET ##
 
 @app.get("/artist") 
@@ -150,23 +187,109 @@ def get_one_artist(artist_id: int, db: Session = Depends(get_db)):
         
     return artist
 
-@app.get("/album") 
+@app.get("/album", response_model=List[schema.AlbumDetailed]) 
 def get_all_albums(limit: Optional[int] = None, db: Session = Depends(get_db)):
-    query = db.query(Album)
-    
+    from sqlalchemy import func
+
+    # Sous-requête : artiste principal de chaque album (le premier par artist_id)
+    artist_subq = (
+        db.query(
+            ArtistAlbumTrack.album_id,
+            Artist.artist_name
+        )
+        .join(Artist, Artist.artist_id == ArtistAlbumTrack.artist_id)
+        .distinct(ArtistAlbumTrack.album_id)
+        .subquery()
+    )
+
+    # Sous-requête : nombre de pistes par album
+    track_count_subq = (
+        db.query(
+            ArtistAlbumTrack.album_id,
+            func.count(ArtistAlbumTrack.track_id).label("track_count")
+        )
+        .group_by(ArtistAlbumTrack.album_id)
+        .subquery()
+    )
+
+    query = (
+        db.query(
+            Album,
+            artist_subq.c.artist_name,
+            track_count_subq.c.track_count
+        )
+        .outerjoin(artist_subq, Album.album_id == artist_subq.c.album_id)
+        .outerjoin(track_count_subq, Album.album_id == track_count_subq.c.album_id)
+        .order_by(Album.album_listens.desc())
+    )
+
+
     if limit is not None:
         query = query.limit(limit)
-    
-    return query.all()
 
-@app.get("/album/{album_id}", response_model=List[schema.Album]) 
+    results = []
+    for album, artist_name, track_count in query.all():
+        results.append(schema.AlbumDetailed(
+            album_id=album.album_id,
+            album_title=album.album_title,
+            album_handle=album.album_handle,
+            album_information=album.album_information,
+            album_date_released=album.album_date_released,
+            album_listens=album.album_listens,
+            album_favorites=album.album_favorites,
+            album_producer=album.album_producer,
+            album_image_file=album.album_image_file,
+            artist_name=artist_name,
+            track_count=track_count or 0
+        ))
+    return results
+
+
+@app.get("/album/{album_id}", response_model=schema.AlbumDetailed) 
 def get_one_album(album_id: int, db: Session = Depends(get_db)):
-    album = db.query(Album).filter(Album.album_id == album_id).first()
+    # On récupère les infos de l'album et le nom du premier artiste trouvé pour cet album
+    # Note: On utilise ArtistAlbumTrack pour le lien
+    from sqlalchemy import func
     
-    if album is None:
+    album = db.query(Album).filter(Album.album_id == album_id).first()
+    if not album:
         raise HTTPException(status_code=404, detail="Album non trouvé")
-        
-    return album
+
+    # On cherche l'artiste principal (le premier dans la table de liaison)
+    artist_data = db.query(Artist.artist_name).join(
+        ArtistAlbumTrack, Artist.artist_id == ArtistAlbumTrack.artist_id
+    ).filter(ArtistAlbumTrack.album_id == album_id).first()
+    
+    artist_name = artist_data[0] if artist_data else "Artiste inconnu"
+    
+    # On compte les pistes
+    track_count = db.query(func.count(ArtistAlbumTrack.track_id)).filter(
+        ArtistAlbumTrack.album_id == album_id
+    ).scalar()
+
+    return schema.AlbumDetailed(
+        album_id=album.album_id,
+        album_title=album.album_title,
+        album_handle=album.album_handle,
+        album_information=album.album_information,
+        album_date_released=album.album_date_released,
+        album_listens=album.album_listens,
+        album_favorites=album.album_favorites,
+        album_producer=album.album_producer,
+        album_image_file=album.album_image_file,
+        artist_name=artist_name,
+        track_count=track_count or 0
+    )
+
+@app.get("/album/{album_id}/tracks", response_model=List[schema.TrackView])
+def get_album_tracks(album_id: int, db: Session = Depends(get_db)):
+    # On utilise la vue matérialisée car elle contient déjà album_id
+    tracks = db.query(ViewTrackMaterialise).filter(
+        ViewTrackMaterialise.album_id == album_id
+    ).all()
+    
+    return tracks
+
 
 @app.get("/track", response_model=List[schema.Track]) 
 def get_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):
@@ -177,9 +300,13 @@ def get_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):
     
     return query.all()
 
-@app.get("/playlist") 
-def get_all_playlists(db: Session = Depends(get_db)):
-    return db.query(Playlist).all()
+@app.get("/playlist", response_model=List[schema.Playlist]) 
+def get_all_playlists(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Playlist).order_by(Playlist.playlist_listens.desc())
+    if limit is not None:
+        query = query.limit(limit)
+    return query.all()
+
 
 @app.get("/users/{user_id}/playlists", response_model=List[schema.Playlist])
 def get_user_playlists(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -188,6 +315,27 @@ def get_user_playlists(user_id: int, db: Session = Depends(get_db), current_user
     
     playlists = db.query(Playlist).filter(Playlist.user_id == user_id).all()
     return playlists
+
+@app.get("/playlist/{playlist_id}", response_model=schema.PlaylistDetailed)
+def get_one_playlist(playlist_id: int, db: Session = Depends(get_db)):
+    # Récupère la playlist et le pseudo du créateur via join
+    result = db.query(Playlist, User.pseudo.label("creator_pseudo")).join(
+        User, Playlist.user_id == User.user_id
+    ).filter(Playlist.playlist_id == playlist_id).first()
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Playlist non trouvée")
+    
+    playlist, creator_pseudo = result
+    
+    return schema.PlaylistDetailed(
+        playlist_id=playlist.playlist_id,
+        playlist_name=playlist.playlist_name,
+        playlist_listens=playlist.playlist_listens,
+        user_id=playlist.user_id,
+        creator_pseudo=creator_pseudo
+    )
+
 
 @app.get("/playlist/{playlist_id}/tracks", response_model=List[schema.TrackView])
 def get_playlist_tracks(playlist_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -215,7 +363,8 @@ def get_playlist_tracks(playlist_id: int, db: Session = Depends(get_db), current
 
 @app.get("/user")
 def get_current_user_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return current_user
+    user = db.query(User).filter(User.user_id == current_user.user_id).first()
+    return user
 
 @app.get("/viewTrack", response_model=List[schema.TrackView]) 
 def get_view_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):
@@ -415,7 +564,7 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 @app.post("/playlist", response_model=schema.Playlist, status_code=201)
-def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_playlist(playlist_data: PlaylistCreate, db: Session = Depends(get_db), current_user: User = Depends(has_permission("playlist_create"))):
     try:
         playlist_dict = playlist_data.model_dump()
         playlist_dict["user_id"] = current_user.user_id
@@ -496,7 +645,7 @@ def create_playlist_user_favorite(playlist_user_favorite_data: PlaylistUserFavor
     return new_playlist_user_favorite
 
 @app.post("/trackUserFavorite", status_code=201)
-def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_track_user_favorite(track_user_favorite_data: TrackUserFavoriteCreate, db: Session = Depends(get_db), current_user: User = Depends(has_permission("track_like"))):
     
     # Vérifie si déjà présent
     existing = db.query(TrackUserFavorite).filter(
@@ -815,7 +964,8 @@ def delete_playlist(playlist_id: int, db: Session = Depends(get_db), current_use
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist non trouvée")
     
-    if playlist.user_id != current_user.user_id:
+    is_admin = any(r.role_name == "ADMIN" for r in current_user.roles)
+    if not is_admin and playlist.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Vous ne pouvez supprimer que vos propres playlists")
     
     db.delete(playlist)

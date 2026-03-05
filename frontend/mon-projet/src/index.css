@@ -85,8 +85,9 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
 .button-discret:focus,
-.button-discret:focus-visible{
+.button-discret:focus-visible {
   outline: none;
 }
 
@@ -130,15 +131,21 @@ button:focus-visible {
 }
 
 /* Logo */
-.logo, .icon_user {
-  height: 3.3em;          /* contrôle propre de la taille */
-  width: auto;            /* garde les proportions */
-  display: block;         /* supprime espace inline */
+.logo,
+.icon_user {
+  height: 3.3em;
+  /* contrôle propre de la taille */
+  width: auto;
+  /* garde les proportions */
+  display: block;
+  /* supprime espace inline */
   object-fit: contain;
 }
-.icon_user{
-  height: 3.3em; 
+
+.icon_user {
+  height: 3.3em;
 }
+
 /* 
 .search-bar {
   margin: 24px 0;
@@ -209,14 +216,14 @@ button:focus-visible {
 
 /* Base commune */
 .btn-auth {
-    margin: 0.2em;
-	padding: 0.5em 1.2em;
-	font-size: 0.95rem;
-	font-weight: 500;
-	border-radius: var(--radius-full);
-	cursor: pointer;
-	transition: all 0.2s ease;
-	border: 1px solid transparent;
+  margin: 0.2em;
+  padding: 0.5em 1.2em;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
 /* Connexion → bouton outline */
@@ -271,19 +278,23 @@ button:focus-visible {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
-.carte-playlist>.description>h3  {
-background-color: gold;
-color: #000;
-text-align: center;
-}
-.carte-chanson>.description, .carte-album>.description,.carte-playlist>.description {
-	display: flex;
-    justify-content: space-between;
+.carte-playlist>.description>h3 {
+  background-color: gold;
+  color: #000;
+  text-align: center;
 }
 
-.carte-chanson>.description>div, .carte-album>.description>div, .carte-playlist>.description>div {
-	display: block
+.carte-chanson>.description,
+.carte-album>.description,
+.carte-playlist>.description {
+  display: flex;
+  justify-content: space-between;
+}
 
+.carte-chanson>.description>div,
+.carte-album>.description>div,
+.carte-playlist>.description>div {
+  display: block
 }
 
 .btn-plus {
@@ -620,12 +631,12 @@ text-align: center;
 
 /* CGU & mentions légales*/
 .centrer {
-    text-align: center;
+  text-align: center;
 }
 
 .articles {
-    color: midnightblue;
-    padding-top: 50px;
+  color: midnightblue;
+  padding-top: 50px;
 }
 
 
@@ -778,6 +789,188 @@ text-align: center;
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }
+
+
+/* ============================================================================
+   PLAYLIST DETAIL - Premium Layout
+   ============================================================================ */
+
+.playlist-detail-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.playlist-header {
+  padding: 4rem 2rem 2rem 2rem;
+  background: linear-gradient(to bottom, rgba(245, 158, 11, 0.15) 0%, var(--color-bg) 100%);
+  display: flex;
+  align-items: flex-end;
+  gap: 2rem;
+}
+
+.playlist-cover-large {
+  width: 232px;
+  height: 232px;
+  min-width: 232px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.playlist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.playlist-type {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.playlist-title-huge {
+  font-size: 4.5rem;
+  font-weight: 900;
+  line-height: 1;
+  margin: 0.2rem 0;
+  letter-spacing: -0.04em;
+  background: none;
+  border: none;
+  color: inherit;
+  width: 100%;
+  padding: 0;
+  cursor: pointer;
+}
+
+.playlist-title-huge:focus {
+  outline: none;
+  border-bottom: 2px solid var(--color-primary);
+}
+
+.playlist-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.creator-bold {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.playlist-action-bar {
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.btn-play-large {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-play-large:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+.btn-icon-secondary {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 8px;
+  border-radius: 50%;
+}
+
+.btn-icon-secondary:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-icon-secondary.active {
+  color: var(--color-primary);
+}
+
+.tracklist-container {
+  padding: 0 2rem 5rem 2rem;
+}
+
+.tracklist-header {
+  display: grid;
+  grid-template-columns: 48px 1fr 100px 80px;
+  padding: 0 1rem 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.track-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 100px 80px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  align-items: center;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.track-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.col-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Espacement entre titre et artiste */
+}
+
+.track-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.track-artist {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.col-duration {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+
 
 .create-section {
   display: flex;

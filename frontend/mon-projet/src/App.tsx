@@ -12,12 +12,20 @@ import Login from "./login"
 import Register from "./register"
 import CGU from "./CGU"
 import MentionsLegales from "./mentions_legales"
+import PlaylistDetail from "./components/PlaylistDetail"
+import AlbumDetail from "./components/AlbumDetail"
+
 
 import { getCurrentUser, logout } from "./services/authService"
 import type { Page } from "./types/Page"
 
 function App() {
   const [page, setPage] = useState<Page>("accueil")
+
+  // pour mémoriser quelle playlist on veut afficher
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null)
+  const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null)
+
 
   // 🔐 État de connexion
   const [isConnected, setIsConnected] = useState<boolean>(false)
@@ -44,7 +52,7 @@ function App() {
   useEffect(() => {
     const verifyAuth = async () => {
       const token = localStorage.getItem("token")
-      
+
       if (!token) {
         if (isConnected) setIsConnected(false)
         setIsLoading(false)
@@ -71,6 +79,17 @@ function App() {
     return () => clearInterval(interval)
   }, [isConnected])
 
+  const handleOpenPlaylist = (id: number) => {
+    setSelectedPlaylistId(id)
+    setPage("playlist_detail")
+  }
+
+  const handleOpenAlbum = (id: number) => {
+    setSelectedAlbumId(id)
+    setPage("album_detail")
+  }
+
+
   // 📝 Gestionnaire de rendu pour inclure la redirection forcée
   const renderContent = () => {
     if (isLoading) return <div className="loading">Vérification de la session...</div>
@@ -87,8 +106,33 @@ function App() {
 
     switch (page) {
       case "accueil":
-        return <Accueil isConnected={isConnected} userId={userId} />
-      
+        return (
+          <Accueil
+            isConnected={isConnected}
+            userId={userId}
+            onOpenPlaylist={handleOpenPlaylist}
+            onOpenAlbum={handleOpenAlbum}
+          />
+        )
+
+
+      case "playlist_detail":
+        return (
+          <PlaylistDetail
+            playlistId={selectedPlaylistId!}
+            isConnected={isConnected}
+          />
+        )
+
+      case "album_detail":
+        return (
+          <AlbumDetail
+            albumId={selectedAlbumId!}
+            isConnected={isConnected}
+          />
+        )
+
+
       case "detail_compte":
         return <DetailCompte />
 
@@ -113,16 +157,24 @@ function App() {
         return <MentionsLegales />
 
       default:
-        return <Accueil isConnected={isConnected} userId={userId} />
+        return (
+          <Accueil
+            isConnected={isConnected}
+            userId={userId}
+            onOpenPlaylist={handleOpenPlaylist}
+            onOpenAlbum={handleOpenAlbum}
+          />
+        )
+
     }
   }
 
   return (
     <>
-      <Header 
-        onNavigate={setPage} 
-        isConnected={isConnected} 
-        onLogout={handleLogout} 
+      <Header
+        onNavigate={setPage}
+        isConnected={isConnected}
+        onLogout={handleLogout}
       />
 
       <main>
