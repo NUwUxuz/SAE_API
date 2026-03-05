@@ -6,7 +6,6 @@ type CartePlaylistProps = {
   id?: number
   title: string
   creator: string
-  pochette: string
   isConnected: boolean
   onAdd?: () => void
   onClick?: () => void
@@ -16,18 +15,18 @@ function CartePlaylist({
   title,
   creator,
   isConnected,
+  onClick
   // onAdd
 }: CartePlaylistProps) {
   const [isFavorite, setIsFavorite] = useState(false)
 
-  const toggleFavorite = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const toggleFavorite = () => {
     setIsFavorite((prev) => !prev)
   }
   
 
   return (
-    <div className="carte-playlist" >
+    <div className="carte-playlist">
       <div className="pochette-wrapper">
         <GeneratedCover title={title} />
         <Coeur
@@ -38,11 +37,11 @@ function CartePlaylist({
       </div>
 
       <article className="description">
-        	<div>
-          	<h3>{title}</h3>
-        		<p>{creator}</p>
-        	</div>
-          {/* {isConnected && onAdd && (
+        <div>
+          <h3>{title}</h3>
+          <p>{creator}</p>
+        </div>
+        {/* {isConnected && onAdd && (
           <button
             className="btn-plus"
             onClick={(e) => {
@@ -65,7 +64,7 @@ function CartePlaylist({
             </svg>
             </button>
           )} */}
-          </article>
+      </article>
     </div>
   )
 }

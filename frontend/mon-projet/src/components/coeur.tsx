@@ -5,17 +5,18 @@ type CoeurProps = {
 }
 
 function Coeur({ isFavorite, isConnected, toggleFavorite }: CoeurProps) {
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (!isConnected) return
     toggleFavorite()
   }
 
+
   return (
     <button
       type="button"
-      className={`button-discret coeur ${isFavorite ? "active" : "inactive"} ${
-    !isConnected ? "disabled" : ""
-  }`}
+      className={`button-discret coeur ${isFavorite ? "active" : "inactive"} ${!isConnected ? "disabled" : ""
+        }`}
       onClick={handleClick}
       aria-label="Ajouter aux favoris"
       title={

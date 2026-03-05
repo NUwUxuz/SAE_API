@@ -105,7 +105,39 @@ export default function AlbumDetail({ albumId, isConnected }: AlbumDetailProps) 
         loadData()
     }, [albumId])
 
-    if (loading) return <div className="playlist-detail-container">Chargement...</div>
+    if (loading) return (
+        <div className="playlist-detail-container">
+            <header className="playlist-header" style={{ background: "linear-gradient(to bottom, rgba(59, 130, 246, 0.10) 0%, var(--color-bg) 100%)" }}>
+                <div className="playlist-cover-large skeleton-box" style={{ borderRadius: "12px" }} />
+                <div className="playlist-info" style={{ gap: "12px", display: "flex", flexDirection: "column" }}>
+                    <div className="skeleton-box" style={{ width: "60px", height: "14px", borderRadius: "4px" }} />
+                    <div className="skeleton-box" style={{ width: "280px", height: "42px", borderRadius: "8px" }} />
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                        <div className="skeleton-box" style={{ width: "100px", height: "16px", borderRadius: "4px" }} />
+                        <div className="skeleton-box" style={{ width: "60px", height: "16px", borderRadius: "4px" }} />
+                        <div className="skeleton-box" style={{ width: "80px", height: "16px", borderRadius: "4px" }} />
+                    </div>
+                </div>
+            </header>
+            <div className="playlist-action-bar" style={{ display: "flex", gap: "16px", alignItems: "center", padding: "24px 0" }}>
+                <div className="skeleton-box" style={{ width: "56px", height: "56px", borderRadius: "50%" }} />
+                <div className="skeleton-box" style={{ width: "36px", height: "36px", borderRadius: "50%" }} />
+                <div className="skeleton-box" style={{ width: "36px", height: "36px", borderRadius: "50%" }} />
+            </div>
+            <div className="tracklist-container">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="track-row" style={{ display: "flex", gap: "16px", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--color-border, rgba(255,255,255,0.08))" }}>
+                        <div className="skeleton-box" style={{ width: "24px", height: "18px", borderRadius: "4px", flexShrink: 0 }} />
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <div className="skeleton-box" style={{ width: `${55 + (i * 13) % 35}%`, height: "16px", borderRadius: "4px" }} />
+                            <div className="skeleton-box" style={{ width: `${30 + (i * 7) % 25}%`, height: "12px", borderRadius: "4px" }} />
+                        </div>
+                        <div className="skeleton-box" style={{ width: "36px", height: "14px", borderRadius: "4px", flexShrink: 0 }} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
 
     return (
         <div className="playlist-detail-container">

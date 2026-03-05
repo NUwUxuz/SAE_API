@@ -1015,6 +1015,7 @@ SELECT
     t.track_comments,
     t.track_date_created,
     t.track_date_recorded,
+    t.track_listens,
     t.track_composer,
     t.track_lyricist,
     t.track_publisher,
