@@ -45,6 +45,7 @@ if SECRET_KEY is None:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
 
 ###########################################
@@ -168,6 +169,38 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     }
     
 ######## GET ##
+
+@app.get("/search/tracks", response_model=List[schema.TrackView])
+def search_tracks(
+    query: str, 
+    db: Session = Depends(get_db), 
+    token: Optional[str] = Depends(optional_oauth2_scheme)
+):
+    results = db.query(ViewTrackMaterialise).filter(
+        or_(
+            ViewTrackMaterialise.track_title.ilike(f"%{query}%"),
+            ViewTrackMaterialise.artist_name.ilike(f"%{query}%")
+        )
+    ).limit(50).all()
+
+    if token:
+        try:
+            # On décode le token pour identifier l'utilisateur
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+            
+            if user_id:
+                # On crée l'entrée dans l'historique
+                new_history = SearchHistory(
+                    user_id=int(user_id),
+                    history_query=query
+                )
+                db.add(new_history)
+                db.commit()
+        except Exception as e:
+            print(f"Token invalide pour l'historique : {e}")
+
+    return results
 
 @app.get("/artist") 
 def get_all_artists(limit: Optional[int] = None, db: Session = Depends(get_db)):
