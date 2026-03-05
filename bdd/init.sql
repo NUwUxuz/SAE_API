@@ -913,6 +913,89 @@ EXECUTE FUNCTION sae.tg_assign_default_role();
 
 /*
 * =================================================================================
+* |-                    TRIGGERS POUR LA PLAYLIST "TITRES AIMÉS"
+* =================================================================================
+*/
+-- Fonction pour créer la playlist "Titres aimés" lors de la création d'un utilisateur
+CREATE OR REPLACE FUNCTION sae.create_liked_tracks_playlist()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_playlist_id INT;
+BEGIN
+    -- Créer la playlist "Titres aimés"
+    INSERT INTO sae.Playlist (playlist_name, user_id)
+    VALUES ('Titres aimés', NEW.user_id)
+    RETURNING playlist_id INTO new_playlist_id;
+    
+    -- Lie la playlist à l'utilisateur dans Playlist_User
+    INSERT INTO sae.Playlist_User (user_id, playlist_id)
+    VALUES (NEW.user_id, new_playlist_id);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- Trigger qui s'exécute après la création d'un utilisateur
+CREATE TRIGGER trigger_create_liked_tracks_playlist
+AFTER INSERT ON sae.User
+FOR EACH ROW
+EXECUTE FUNCTION sae.create_liked_tracks_playlist();
+-- Fonction pour ajouter automatiquement un titre aimé à la playlist "Titres aimés"
+CREATE OR REPLACE FUNCTION sae.add_to_liked_tracks_playlist()
+RETURNS TRIGGER AS $$
+DECLARE
+    liked_playlist_id INT;
+BEGIN
+    SELECT p.playlist_id INTO liked_playlist_id
+    FROM sae.Playlist p
+    WHERE p.user_id = NEW.user_id 
+    AND p.playlist_name = 'Titres aimés'
+    LIMIT 1;
+    
+    -- Si la playlist existe, ajouter le titre dedans (s'il n'y est pas déjà)
+    IF liked_playlist_id IS NOT NULL THEN
+        INSERT INTO sae.Playlist_Track (playlist_id, track_id)
+        VALUES (liked_playlist_id, NEW.track_id)
+        ON CONFLICT (playlist_id, track_id) DO NOTHING;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- Trigger qui s'exécute après l'ajout d'un favori
+CREATE TRIGGER trigger_add_to_liked_tracks_playlist
+AFTER INSERT ON sae.Track_User_Favorite
+FOR EACH ROW
+EXECUTE FUNCTION sae.add_to_liked_tracks_playlist();
+-- Fonction pour retirer automatiquement un titre de la playlist quand on retire le like
+CREATE OR REPLACE FUNCTION sae.remove_from_liked_tracks_playlist()
+RETURNS TRIGGER AS $$
+DECLARE
+    liked_playlist_id INT;
+BEGIN
+    SELECT p.playlist_id INTO liked_playlist_id
+    FROM sae.Playlist p
+    WHERE p.user_id = OLD.user_id 
+    AND p.playlist_name = 'Titres aimés'
+    LIMIT 1;
+    
+    -- Si la playlist existe, retire le titre
+    IF liked_playlist_id IS NOT NULL THEN
+        DELETE FROM sae.Playlist_Track 
+        WHERE playlist_id = liked_playlist_id 
+        AND track_id = OLD.track_id;
+    END IF;
+    
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+-- Trigger qui s'exécute après la suppression d'un favori
+CREATE TRIGGER trigger_remove_from_liked_tracks_playlist
+AFTER DELETE ON sae.Track_User_Favorite
+FOR EACH ROW
+EXECUTE FUNCTION sae.remove_from_liked_tracks_playlist();
+
+/*
+* =================================================================================
 * |-                                    Vues
 * =================================================================================
 */

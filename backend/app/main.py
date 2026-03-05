@@ -56,10 +56,10 @@ app = FastAPI()
 # Configuration BDD
 db_host = os.getenv("DB_HOST", "localhost")
 DB_CONFIG = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "admin",
-    "host": "localhost",
+    "dbname": "mabase",
+    "user": "user",
+    "password": "password",
+    "host": "db",
     "port": "5432"
 }
 

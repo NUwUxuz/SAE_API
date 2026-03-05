@@ -1,36 +1,98 @@
-import "./user.css"
-import {useState} from "react"
+import { useState, useEffect } from "react";
+import InfoUser from "./components/info_user";
+import StatsUser from "./components/stats_user";
+import "./details_compte.css";
 
-import InfoUser from "./components/info_user"
-import StatsUser from "./components/stats_user"
+interface UserData {
+    user_id: number;
+    email: string;
+    pseudo?: string;
+    user_login: string;
+}
 
-export default
+export default function DetailCompte() {
+    const [user, setUser] = useState<UserData | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-function detail_compte() {
-    const [showStats, setShowStats] = useState(false)
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                setError("Session expirée. Veuillez vous reconnecter.");
+                return;
+            }
+            try {
+                const response = await fetch("http://127.0.0.1:8000/user", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+                if (!response.ok) throw new Error("Erreur de récupération.");
+                const data = await response.json();
+                setUser(data);
+            } catch (err: any) {
+                setError(err.message);
+            }
+        };
+        fetchUserData();
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+    };
+
+    if (error) return (
+        <div className="page-wrapper center">
+            <div className="alert error">⚠️ {error}</div>
+        </div>
+    );
+
+    if (!user) return <div className="page-wrapper center"><div className="loader"></div></div>;
 
     return (
-        <>
-            <InfoUser
-                email="adressemail@truc.com"
-                id="ncxjfvdst"
-                password="motdepass123"
-            />
-            {showStats && (
-                <StatsUser 
-                    favoris={35}
-                    playlists={12}
-                    track_listen={[{user_id:1, track_id:6, nb_listening:27}]}
-                    genre_listen={[{user_id:1, genre_id:3, genre_rate:0.24}]}
-                />
-            )}
+        <div className="page-wrapper">
+            <div className="dashboard-container">
+                {/* COLONNE GAUCHE : Profil permanent */}
+                <aside className="sidebar">
+                    <div className="profile-summary">
+                        <div className="avatar-large">
+                            {(user.pseudo || user.user_login || "U").charAt(0).toUpperCase()}
+                        </div>
+                        <h2>{user.pseudo || user.user_login}</h2>
+                    </div>
 
-            <button id="bouton-user" className="bouton-cliquable" onClick={() => setShowStats(!showStats)}>{showStats ? "Cacher stats utilisateurs" : "Afficher stats utilisateurs"}</button>
+                    <div className="sidebar-content">
+                        <InfoUser email={user.email} id={user.user_id.toString()} />
+                    </div>
 
-            <div id="bouton-footer">
-                <button id="deconnecter" className="bouton-cliquable">Se déconnecter</button>
-                <button id="supprimer" className="bouton-cliquable">Supprimer le compte</button>
+                    <div className="sidebar-footer">
+                        {/* Utilisation de btn-logout pour correspondre à ton CSS de charte */}
+                        <button className="btn-logout" onClick={handleLogout}>Déconnexion</button>
+                        <button className="btn-ghost" onClick={() => {/* Logique suppression */}}>
+                            Supprimer le compte
+                        </button>
+                    </div>
+                </aside>
+
+                <main className="content-area">
+                    <header className="content-header">
+                        <h1>Tableau de bord</h1>
+                        <p>Aperçu de votre activité et de vos préférences musicales.</p>
+                    </header>
+                    
+                    <div className="stats-wrapper">
+                        <StatsUser 
+                            favoris={0} 
+                            playlists={0}
+                            track_listen={[]} 
+                            genre_listen={[]} 
+                        />
+                    </div>
+                </main>
             </div>
-        </>
+        </div>
     );
 }
