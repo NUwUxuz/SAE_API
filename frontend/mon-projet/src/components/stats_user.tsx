@@ -30,14 +30,12 @@ function StatsUser({favoris, playlists, track_listen, genre_listen}: StatsUserPr
                     <h2 className="souligner">Nombre de musique en favoris : </h2>
                     <div className="chiffre-image">
                         <p className="chiffre-stat">{favoris}</p>
-                        {/* <img src={coeur} id="image-favoris" alt="Image favoris"></img> */}
                     </div>
                 </div>
                 <div className="stat-simple">
                     <h2 className="souligner">Nombre de playlists créées : </h2>
                     <div className="chiffre-image">
                         <p className="chiffre-stat">{playlists}</p>
-                        {/* <img src={playlist} id="image-playlist" alt="Image playlist"></img> */}
                     </div>
                 </div>
             </div>

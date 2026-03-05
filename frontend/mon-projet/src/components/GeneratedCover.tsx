@@ -4,9 +4,6 @@ type GeneratedCoverProps = {
   title: string
 }
 
-/* =========================
-   Utils
-========================= */
 
 function stringHash(str: string): number {
   let hash = 0
@@ -43,9 +40,6 @@ function getInitials(title: string): string {
   ).toUpperCase()
 }
 
-/* =========================
-   Component
-========================= */
 
 export default function GeneratedCover({ title }: GeneratedCoverProps) {
   const { hash, gradient, initials, shapeSeed } = useMemo(() => {
@@ -76,6 +70,7 @@ export default function GeneratedCover({ title }: GeneratedCoverProps) {
     >
       {/* Cercle décoratif */}
       <div
+      className="cercle"
         style={{
           position: "absolute",
           width: "70%",
@@ -91,6 +86,7 @@ export default function GeneratedCover({ title }: GeneratedCoverProps) {
 
       {/* Carré décoratif */}
       <div
+      className="carre"
         style={{
           position: "absolute",
           width: "40%",
@@ -105,6 +101,7 @@ export default function GeneratedCover({ title }: GeneratedCoverProps) {
 
       {/* Initiales */}
       <span
+      className="cercle"
         style={{
           position: "relative",
           fontSize: "3rem",

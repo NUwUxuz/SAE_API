@@ -1,5 +1,4 @@
 import { ReactNode, useRef } from "react"
-// import "./carousel.css"
 
 type CarouselProps = {
   children: ReactNode
