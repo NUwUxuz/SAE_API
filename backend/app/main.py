@@ -245,11 +245,36 @@ def get_all_albums(limit: Optional[int] = None, db: Session = Depends(get_db)):
     return results
 
 
+@app.get("/topAlbum", response_model=List[schema.Album]) 
+def get_top_albums(limit: Optional[int] = 20, db: Session = Depends(get_db)):
+
+    # On sélectionne les colonnes de l'album ET le nom de l'artiste
+    query = db.query(
+        Album.album_id,
+        Album.album_title,
+        Album.album_listens,
+        Album.album_image_file,
+        
+        func.min(Artist.artist_name).label("artist_name") 
+    ).join(
+        ArtistAlbumTrack, Album.album_id == ArtistAlbumTrack.album_id
+    ).join(
+        Artist, Artist.artist_id == ArtistAlbumTrack.artist_id
+    ).group_by(
+        Album.album_id,
+        Album.album_title,
+        Album.album_listens,
+        Album.album_image_file
+    ).order_by(
+        Album.album_listens.desc()
+    ).limit(limit).all()
+
+    return query
+
 @app.get("/album/{album_id}", response_model=schema.AlbumDetailed) 
 def get_one_album(album_id: int, db: Session = Depends(get_db)):
     # On récupère les infos de l'album et le nom du premier artiste trouvé pour cet album
     # Note: On utilise ArtistAlbumTrack pour le lien
-    from sqlalchemy import func
     
     album = db.query(Album).filter(Album.album_id == album_id).first()
     if not album:
@@ -300,12 +325,40 @@ def get_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):
     
     return query.all()
 
+@app.get("/topTrack", response_model=List[schema.TrackView])
+def get_top_tracks(limit: Optional[int] = 20, db: Session = Depends(get_db)):
+
+    query = db.query(ViewTrackMaterialise).order_by(
+        ViewTrackMaterialise.track_listens.desc()
+    )
+    
+    if limit is not None:
+        query = query.limit(limit)
+
+    results = query.all()
+
+    if not results:
+        return []
+
+    return results
+
 @app.get("/playlist", response_model=List[schema.Playlist]) 
 def get_all_playlists(limit: Optional[int] = None, db: Session = Depends(get_db)):
     query = db.query(Playlist).order_by(Playlist.playlist_listens.desc())
     if limit is not None:
         query = query.limit(limit)
     return query.all()
+
+@app.get("/topPlaylist", response_model=List[schema.Playlist]) 
+def get_top_playlists(limit: int = 20, db: Session = Depends(get_db)):
+
+    playlists = db.query(Playlist).group_by(
+        Playlist.playlist_id
+    ).order_by(
+        Playlist.playlist_listens.desc()
+    ).limit(limit).all()
+
+    return playlists
 
 
 @app.get("/users/{user_id}/playlists", response_model=List[schema.Playlist])

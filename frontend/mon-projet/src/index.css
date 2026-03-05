@@ -285,7 +285,9 @@ button:focus-visible {
 }
 
 .btn-plus {
-  padding: 0.3em;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  height: 3em;
   background-color: var(--color-primary);
   border-radius: 50%;
   border: none;
@@ -298,6 +300,9 @@ button:focus-visible {
 
 .btn-plus svg {
   stroke: var(--color-bg);
+  width: 1em;
+  height: 1em;
+  stroke-width: 0.2em;
 }
 
 .btn-plus:hover {
