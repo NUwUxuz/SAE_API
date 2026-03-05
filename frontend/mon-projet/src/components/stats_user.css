@@ -1,0 +1,92 @@
+/* Stats Layout */
+.stats-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.stats-grid-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.stat-card-mini {
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-info{
+    color: black;
+}
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    display: block;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Visual Lists (Bars) */
+.stat-card-large {
+    text-align: left;
+}
+
+.stat-title {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+}
+
+.visual-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.visual-item {
+    margin-bottom: 1rem;
+}
+
+.item-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.item-count {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease-in-out;
+}
+
+.track-fill { background: var(--primary-color); }
+.genre-fill { background: #10b981; } /* Vert pour les genres */

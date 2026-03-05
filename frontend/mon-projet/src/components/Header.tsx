@@ -56,6 +56,7 @@ function Header({ onNavigate, isConnected, onLogout }: HeaderProps) {
           </div>
         ) : (
           <div className="auth-menu" ref={menuRef} style={{ position: "relative" }}>
+            
             {/* Icône Utilisateur qui déclenche le menu */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 

@@ -108,6 +108,12 @@ button:focus-visible {
   }
 }
 
+
+.error-message { 
+    color: var(--color-danger);
+}
+
+
 /* header================================================================== */
 
 .header {
@@ -134,11 +140,8 @@ button:focus-visible {
 .logo,
 .icon_user {
   height: 3.3em;
-  /* contrôle propre de la taille */
   width: auto;
-  /* garde les proportions */
   display: block;
-  /* supprime espace inline */
   object-fit: contain;
 }
 
@@ -146,25 +149,10 @@ button:focus-visible {
   height: 3.3em;
 }
 
-/* 
-.search-bar {
-  margin: 24px 0;
-  display: flex;
-  justify-content: center;
-}
 
-.search-bar input {
-  width: 100%;
-  max-width: 480px;
-  padding: 10px 14px;
-  font-size: 16px;
-  border-radius: 999px;
-  border: 1px solid #ccc;
-} */
 
 .search-bar {
   flex: 1;
-  /* prend l’espace central */
   display: flex;
   justify-content: center;
   margin: 0 2rem;
@@ -246,7 +234,7 @@ button:focus-visible {
 }
 
 .btn-register:hover {
-  background: (--color-primary);
+  background: var(--color-primary);
   /* légèrement plus clair */
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
@@ -792,7 +780,7 @@ button:focus-visible {
 
 
 /* ============================================================================
-   PLAYLIST DETAIL - Premium Layout
+   PLAYLIST DETAIL
    ============================================================================ */
 
 .playlist-detail-container {
@@ -950,7 +938,6 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  /* Espacement entre titre et artiste */
 }
 
 .track-name {
@@ -1035,3 +1022,7 @@ button:focus-visible {
 .CGU, .mentions-legales{
   margin: 5%;
 }
+
+
+
+

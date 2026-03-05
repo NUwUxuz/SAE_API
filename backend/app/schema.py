@@ -180,6 +180,7 @@ class UserCreate(BaseModel):
 
 class PlaylistCreate(BaseModel):
     playlist_name: str
+    user_id: int
 
 # ==================== ListeningHistory Schemas =========
 
@@ -251,7 +252,7 @@ class SearchHistoryCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     current_password: str
-
+    email: Optional[EmailStr] = None
     image: Optional[str] = None
     pseudo: Optional[str] = None
     new_mdp: Optional[str] = None

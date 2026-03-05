@@ -4,8 +4,7 @@ import { register } from "./services/authService";
 type Step = 1 | 2 | 3 | 4;
 
 const musicTags = ["Rock", "Pop", "Rap", "Jazz", "Classique"];
-const streamingServices = ["Netflix", "YouTube", "Twitch", "Disney+"];
-
+const streamingServices = ["Spotify", "YouTube", "Téléchargé", "Deezer", "Apple Music", "Autre"];
 
 type RegisterProps = {
     onNavigate: (page: Page) => void
@@ -34,7 +33,17 @@ export default function Register({ onNavigate }: RegisterProps) {
         );
     };
 
+    const isPasswordValid = () => {
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{13,}$/;
+        return regex.test(password);
+    };
+
     const nextStep = () => {
+        if (step === 1 && !isPasswordValid()) {
+            alert("Ton mot de passe n'est pas valide !");
+            return;
+        }
+
         if (step < 4) setStep((prev) => (prev + 1) as Step);
     };
 
@@ -52,8 +61,10 @@ export default function Register({ onNavigate }: RegisterProps) {
             });
             alert("Inscription terminée ! Connecte-toi maintenant.");
             onNavigate("login");
+            return true;
         } catch (err: any) {
             alert(err.message || "Erreur lors de l'inscription");
+            return false;
         }
     };
 
@@ -64,47 +75,60 @@ export default function Register({ onNavigate }: RegisterProps) {
 
                 {/* Étape 1 */}
                 {step === 1 && (
-                    <div className="login-form">
-                        <label>Pseudo (Nom affiché)</label>
-                        <input
-                            className="champ"
-                            type="text"
-                            placeholder="Ex: orchestra"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                        />
-                        <label>Identifiant de connexion (Unique)</label>
-                        <input
-                            className="champ"
-                            type="text"
-                            placeholder="Ex: orchest_ra"
-                            value={loginIdentifier}
-                            onChange={(e) => setLoginIdentifier(e.target.value)}
-                        />
-                        <label>Email</label>
-                        <input
-                            className="champ"
-                            type="email"
-                            placeholder="Ton email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                        <label>Mot de passe</label>
-                        <input
-                            className="champ"
-                            type="password"
-                            placeholder="Ton mot de passe"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-                )}
+                <div className="login-form">
+                    <label>Pseudo (Nom affiché)</label>
+                    <input
+                        className="champ"
+                        type="text"
+                        placeholder="Ex: orchestra"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
+
+                    <label>Identifiant de connexion (Unique)</label>
+                    <input
+                        className="champ"
+                        type="text"
+                        placeholder="Ex: orchest_ra"
+                        value={loginIdentifier}
+                        onChange={(e) => setLoginIdentifier(e.target.value)}
+                    />
+
+                    <label>Email</label>
+                    <input
+                        className="champ"
+                        type="email"
+                        placeholder="Ton email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+
+                    <label>Mot de passe</label>
+                    <input
+                        className="champ"
+                        type="password"
+                        placeholder="Ton mot de passe"
+                        value={password}
+                        minLength={13}
+                        pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{13,}$"
+                        title="Le mot de passe doit contenir au moins 13 caractères, une majuscule, une minuscule et un caractère spécial"
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+
+                    {password.length > 0 && !isPasswordValid() && (
+                        <p className="error-message" >
+                            Le mot de passe doit contenir au moins 13 caractères, une majuscule, une minuscule et un caractère spécial.
+                        </p>
+                    )}
+                </div>
+            )}
 
                 {/* Étape 2 */}
                 {step === 2 && (
                     <div className="login-form">
                         <label>Quels genres de musique aimes-tu ?</label>
-                        <div className="tags-container" >
+                        <div className="tags-container">
                             {musicTags.map((tag) => (
                                 <button
                                     key={tag}
@@ -151,7 +175,6 @@ export default function Register({ onNavigate }: RegisterProps) {
                     </div>
                 )}
 
-                {/* Boutons */}
                 <div className="login-actions">
                     {step > 1 && (
                         <button className="btn cancel" type="button" onClick={prevStep}>
@@ -167,14 +190,13 @@ export default function Register({ onNavigate }: RegisterProps) {
                         <button
                             className="btn confirm"
                             type="button"
-                            onClick={() => {
-                                handleSubmit();
-                                onNavigate("detail_compte");
+                            onClick={async () => {
+                                const ok = await handleSubmit();
+                                if (ok) onNavigate("detail_compte");
                             }}
                         >
                             Confirmer
                         </button>
-
                     )}
                 </div>
             </div>

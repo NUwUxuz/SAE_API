@@ -59,7 +59,6 @@ export default function AddToPlaylistModal({ isOpen, onClose, trackId, userId }:
         if (!trackId) return;
 
         // Pour chaque playlist sélectionnée, on ajoute le titre
-        // Idéalement, on devrait faire ça en parallèle avec Promise.all
         try {
             const promises = selectedPlaylistIds.map(pid => addTrackToPlaylist(pid, trackId));
             await Promise.all(promises);
