@@ -3,11 +3,13 @@ import Carousel from "./components/Carousel"
 import CarteChanson from "./components/carte_chanson"
 import CartePlaylist from "./components/carte_playlist"
 import CarteAlbum from "./components/carte_album"
-import AddToPlaylistModal from "./components/AddToPlaylistModal" // Import du modal
+import AddToPlaylistModal from "./components/AddToPlaylistModal"
 import { getChansons } from "./services/chansonService"
 import type { Playlist } from "./types/Playlist"
 import type { Album } from "./types/Album"
 import viteLogo from "/vite.svg"
+
+
 
 type AccueilProps = {
   isConnected: boolean
@@ -22,6 +24,7 @@ interface Track {
   track_title: string;
   artist_name: string;
   album_image_file: string;
+  track_interest?: number;
 }
 
 interface PlaylistDB {
@@ -31,13 +34,22 @@ interface PlaylistDB {
   user_id: number;
 }
 
-export default function Accueil({ isConnected = false, userId, onOpenPlaylist, onOpenAlbum }: AccueilProps) {
+interface AlbumDB {
+  album_id: number;
+  album_title: string;
+  album_listens: number;
+  album_image_file?: string;
+  artist_name?: string;
+}
 
+export default function Accueil({ isConnected = false, userId, onOpenPlaylist, onOpenAlbum }: AccueilProps) {
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [recoGRU, setRecoGRU] = useState<Track[]>([]);
   const [recoTF_IDF, setRecoTF_IDF] = useState<Track[]>([]);
   const [userPlaylists, setUserPlaylists] = useState<PlaylistDB[]>([]);
+  const [topAlbums, setTopAlbums] = useState<AlbumDB[]>([]);
+  const [topPlaylists, setTopPlaylists] = useState<PlaylistDB[]>([]);
 
   const [loadingGeneral, setLoadingGeneral] = useState(true);
   const [loadingGRU, setLoadingGRU] = useState(false);
@@ -124,33 +136,32 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist, o
       }
     }
 
+    async function loadTopAlbums() {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/album?limit=20");
+        if (res.ok) setTopAlbums(await res.json());
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadTopPlaylists() {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/playlist?limit=20");
+        if (res.ok) setTopPlaylists(await res.json());
+      } catch (e) { console.error(e); }
+    }
+
     loadGeneralTracks();
     loadGRU();
     loadTF_IDF();
     loadUserPlaylists();
+    loadTopAlbums();
+    loadTopPlaylists();
   }, [isConnected, userId]);
+
 
 
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null)
-  const playlists: Partial<Playlist>[] = Array.from({ length: 50 }, () => ({
-    title: "Top Disney",
-    creator: "Orchestra",
-    pochette: viteLogo,
-  }))
-
-  const albums: Album[] = Array.from({ length: 5 }, () => ({
-    title: "Frozen",
-    artist: "Idina Menzel",
-    pochette: viteLogo,
-  }))
-
-  /* 🔎 Filtres */
-  const playlistsFiltrees = playlists
-
-
-  const albumsFiltres = albums
-
 
   const handleAddTrack = (trackId: number) => {
     setSelectedTrackId(trackId)
@@ -272,31 +283,32 @@ export default function Accueil({ isConnected = false, userId, onOpenPlaylist, o
 
           <h2>Playlists recommandées</h2>
           <Carousel>
-            {playlistsFiltrees.map((playlist, index) => (
+            {topPlaylists.map((pl) => (
               <CartePlaylist
-                key={index}
-                title={playlist.title || playlist.playlist_name || "Sans titre"}
-                creator={playlist.creator || "Inconnu"}
-                pochette={playlist.pochette || viteLogo}
+                key={pl.playlist_id}
+                title={pl.playlist_name}
+                creator={`${pl.playlist_listens} écoutes`}
+                pochette={viteLogo}
                 isConnected={isConnected}
+                onClick={() => onOpenPlaylist(pl.playlist_id)}
               />
             ))}
           </Carousel>
 
           <h2>Albums recommandés</h2>
           <Carousel>
-            {albumsFiltres.map((album, index) => (
+            {topAlbums.map((album) => (
               <CarteAlbum
-                key={index}
-                title={album.title}
-                artist={album.artist}
-                pochette={album.pochette}
+                key={album.album_id}
+                title={album.album_title}
+                artist={album.artist_name || "Artiste inconnu"}
+                pochette={album.album_image_file}
                 isConnected={isConnected}
-                onClick={() => onOpenAlbum(index)} // Note: assuming index is ID or we need real IDs
+                onClick={() => onOpenAlbum(album.album_id)}
               />
-
             ))}
           </Carousel>
+
         </main>
       </div>
 

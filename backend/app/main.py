@@ -7,14 +7,15 @@ from sqlalchemy import create_engine
 import bcrypt
 
 from models import ( 
-    Album, User, Playlist, Track, Artist, ListeningHistory, UserAlbumListening, UserPlaylistListening,
+    Album, User, Playlist, Track, Artist, ArtistAlbumTrack, ListeningHistory, UserAlbumListening, UserPlaylistListening,
     PlaylistUserFavorite, TrackUserFavorite, UserArtistFavorite, UserAlbumFavorite, PlaylistUser,
     PlaylistTrack, UserTrackListening, SearchHistory, ViewTrackMaterialise
 )
 
-import backend.app.schema as schema
 
-from backend.app.schema import (    
+import schema
+
+from schema import (    
     UserCreate, PlaylistCreate, ListeningHistoryCreate, UserAlbumListeningCreate, UserPlaylistListeningCreate,
     PlaylistUserFavoriteCreate, TrackUserFavoriteCreate, UserArtistFavoriteCreate, UserAlbumFavoriteCreate, PlaylistUserCreate,
     PlaylistTrackCreate, UserTrackListeningCreate, SearchHistoryCreate, TrackView,
@@ -53,10 +54,10 @@ app = FastAPI()
 # Configuration BDD
 db_host = os.getenv("DB_HOST", "localhost")
 DB_CONFIG = {
-    "dbname": "mabase",
-    "user": "user",
-    "password": "password",
-    "host": "db",
+    "dbname": "postgres",
+    "user": "postgres",
+    "password": "admin",
+    "host": "localhost",
     "port": "5432"
 }
 
@@ -150,14 +151,63 @@ def get_one_artist(artist_id: int, db: Session = Depends(get_db)):
         
     return artist
 
-@app.get("/album") 
+@app.get("/album", response_model=List[schema.AlbumDetailed]) 
 def get_all_albums(limit: Optional[int] = None, db: Session = Depends(get_db)):
-    query = db.query(Album)
-    
+    from sqlalchemy import func
+
+    # Sous-requête : artiste principal de chaque album (le premier par artist_id)
+    artist_subq = (
+        db.query(
+            ArtistAlbumTrack.album_id,
+            Artist.artist_name
+        )
+        .join(Artist, Artist.artist_id == ArtistAlbumTrack.artist_id)
+        .distinct(ArtistAlbumTrack.album_id)
+        .subquery()
+    )
+
+    # Sous-requête : nombre de pistes par album
+    track_count_subq = (
+        db.query(
+            ArtistAlbumTrack.album_id,
+            func.count(ArtistAlbumTrack.track_id).label("track_count")
+        )
+        .group_by(ArtistAlbumTrack.album_id)
+        .subquery()
+    )
+
+    query = (
+        db.query(
+            Album,
+            artist_subq.c.artist_name,
+            track_count_subq.c.track_count
+        )
+        .outerjoin(artist_subq, Album.album_id == artist_subq.c.album_id)
+        .outerjoin(track_count_subq, Album.album_id == track_count_subq.c.album_id)
+        .order_by(Album.album_listens.desc())
+    )
+
+
     if limit is not None:
         query = query.limit(limit)
-    
-    return query.all()
+
+    results = []
+    for album, artist_name, track_count in query.all():
+        results.append(schema.AlbumDetailed(
+            album_id=album.album_id,
+            album_title=album.album_title,
+            album_handle=album.album_handle,
+            album_information=album.album_information,
+            album_date_released=album.album_date_released,
+            album_listens=album.album_listens,
+            album_favorites=album.album_favorites,
+            album_producer=album.album_producer,
+            album_image_file=album.album_image_file,
+            artist_name=artist_name,
+            track_count=track_count or 0
+        ))
+    return results
+
 
 @app.get("/album/{album_id}", response_model=schema.AlbumDetailed) 
 def get_one_album(album_id: int, db: Session = Depends(get_db)):
@@ -214,9 +264,13 @@ def get_tracks(limit: Optional[int] = None, db: Session = Depends(get_db)):
     
     return query.all()
 
-@app.get("/playlist") 
-def get_all_playlists(db: Session = Depends(get_db)):
-    return db.query(Playlist).all()
+@app.get("/playlist", response_model=List[schema.Playlist]) 
+def get_all_playlists(limit: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Playlist).order_by(Playlist.playlist_listens.desc())
+    if limit is not None:
+        query = query.limit(limit)
+    return query.all()
+
 
 @app.get("/users/{user_id}/playlists", response_model=List[schema.Playlist])
 def get_user_playlists(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
